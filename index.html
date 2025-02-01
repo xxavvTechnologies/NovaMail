@@ -5,26 +5,57 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NovaMail</title>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        window.onerror = function(msg, url, line) {
+            console.error('Global error:', msg, 'at', url, ':', line);
+            const notification = document.getElementById('notification');
+            if (notification) {
+                notification.textContent = 'An error occurred. Please refresh the page.';
+                notification.className = 'notification error';
+                notification.style.display = 'block';
+            }
+            return false;
+        };
+    </script>
+    <script src="https://apis.google.com/js/api.js" async defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <div class="app">
         <div class="sidebar">
-            <button class="new-email-button" id="newEmailBtn">New Email</button>
-            <div class="email-list" id="emailList">
-                <!-- Email items will be inserted here -->
+            <div class="auth-section" id="authSection">
+                <button class="login-button" id="loginBtn">Sign in with Google</button>
+            </div>
+            <div id="emailControls" style="display: none;">
+                <button class="new-email-button" id="newEmailBtn">New Email</button>
+                <div class="folder-list">
+                    <div class="folder active">Inbox</div>
+                    <div class="folder">Sent</div>
+                    <div class="folder">Drafts</div>
+                    <div class="folder">Trash</div>
+                </div>
+                <div class="email-list" id="emailList">
+                    <!-- Email items will be inserted here -->
+                </div>
             </div>
         </div>
         <div class="main-content">
             <div class="no-selection" id="noSelection">
                 Select an email to view or compose a new one
             </div>
-            <div class="email-view" id="emailView" style="display: none;">
-                <h2 id="emailSubject"></h2>
-                <p id="emailFrom"></p>
-                <p id="emailTo"></p>
-                <div class="email-body" id="emailBody"></div>
+            <div class="email-view fade-in" id="emailView" style="display: none;">
+                <div class="email-header">
+                    <h2 id="emailSubject"></h2>
+                    <div class="email-meta">
+                        <p id="emailFrom"></p>
+                        <p id="emailTo"></p>
+                        <p id="emailDate"></p>
+                    </div>
+                    <div class="email-attachments" id="emailAttachments"></div>
+                </div>
+                <div class="email-content" id="emailBody"></div>
             </div>
-            <div class="composer" id="emailComposer" style="display: none;">
+            <div class="composer fade-in" id="emailComposer" style="display: none;">
                 <div class="header">New Message</div>
                 <div class="field">
                     <select id="serviceSelect">
@@ -41,10 +72,23 @@
                 <div class="field">
                     <textarea id="bodyField" placeholder="Body"></textarea>
                 </div>
+                <div class="composer-toolbar" id="composerToolbar">
+                    <button class="toolbar-button" data-command="bold" title="Bold">B</button>
+                    <button class="toolbar-button" data-command="italic" title="Italic">I</button>
+                    <button class="toolbar-button" data-command="underline" title="Underline">U</button>
+                    <button class="toolbar-button" data-command="createLink" title="Insert Link">🔗</button>
+                    <button class="toolbar-button" data-command="insertImage" title="Insert Image">📷</button>
+                </div>
+                <div class="rich-editor" id="richEditor" contenteditable="true"></div>
                 <button class="send-button" id="sendButton">Send</button>
             </div>
         </div>
+        <div id="loading" class="loading-overlay">
+            <div class="loading-spinner"></div>
+        </div>
+        <div id="notification" class="notification"></div>
     </div>
+    <script src="https://cdn.tiny.cloud/1/xw52tm5xixz73zm57hobthcnp77atyt30kgb0ypf6omd4ets/tinymce/5/tinymce.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
