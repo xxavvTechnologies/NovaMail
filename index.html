@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovaMail</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app">
+        <div class="sidebar">
+            <button class="new-email-button" id="newEmailBtn">New Email</button>
+            <div class="email-list" id="emailList">
+                <!-- Email items will be inserted here -->
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="no-selection" id="noSelection">
+                Select an email to view or compose a new one
+            </div>
+            <div class="email-view" id="emailView" style="display: none;">
+                <h2 id="emailSubject"></h2>
+                <p id="emailFrom"></p>
+                <p id="emailTo"></p>
+                <div class="email-body" id="emailBody"></div>
+            </div>
+            <div class="composer" id="emailComposer" style="display: none;">
+                <div class="header">New Message</div>
+                <div class="field">
+                    <select id="serviceSelect">
+                        <option value="">Select email service</option>
+                        <option value="gmail">Gmail</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <input type="text" id="toField" placeholder="To">
+                </div>
+                <div class="field">
+                    <input type="text" id="subjectField" placeholder="Subject">
+                </div>
+                <div class="field">
+                    <textarea id="bodyField" placeholder="Body"></textarea>
+                </div>
+                <button class="send-button" id="sendButton">Send</button>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
