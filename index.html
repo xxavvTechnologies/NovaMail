@@ -17,6 +17,10 @@
             return false;
         };
     </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -29,15 +33,39 @@
             <div id="emailControls" style="display: none;">
                 <button class="new-email-button" id="newEmailBtn">New Email</button>
                 <div class="folder-list">
-                    <div class="folder active">Inbox</div>
-                    <div class="folder">Sent</div>
-                    <div class="folder">Drafts</div>
-                    <div class="folder">Trash</div>
-                </div>
-                <div class="email-list" id="emailList">
-                    <!-- Email items will be inserted here -->
+                    <button class="folder active" data-folder="INBOX">Inbox</button>
+                    <button class="folder" data-folder="SENT">Sent</button>
+                    <button class="folder" data-folder="DRAFT">Drafts</button>
+                    <button class="folder" data-folder="TRASH">Trash</button>
+                    <button class="folder" data-folder="SPAM">Spam</button>
                 </div>
             </div>
+        </div>
+        <div class="email-list-container">
+            <div class="email-list-header">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                    <input type="text" class="search-input" id="searchInput" placeholder="Search emails...">
+                </div>
+                <div class="email-actions">
+                    <button class="action-btn" title="Mark as read" id="markReadBtn">
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                    <button class="action-btn" title="Mark as unread" id="markUnreadBtn">
+                        <i class="fa-regular fa-circle"></i>
+                    </button>
+                    <button class="action-btn" title="Star" id="starBtn">
+                        <i class="fa-regular fa-star"></i>
+                    </button>
+                    <button class="action-btn" title="Archive" id="archiveBtn">
+                        <i class="fa-solid fa-box-archive"></i>
+                    </button>
+                    <button class="action-btn" title="Delete" id="deleteBtn">
+                        <i class="fa-regular fa-trash-can"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="email-list" id="emailList"></div>
         </div>
         <div class="main-content">
             <div class="no-selection" id="noSelection">
@@ -47,40 +75,133 @@
                 <div class="email-header">
                     <h2 id="emailSubject"></h2>
                     <div class="email-meta">
-                        <p id="emailFrom"></p>
-                        <p id="emailTo"></p>
-                        <p id="emailDate"></p>
+                        <div class="email-address-line">
+                            <span class="meta-label">From:</span>
+                            <div class="email-address" id="emailFrom"></div>
+                        </div>
+                        <div class="email-address-line">
+                            <span class="meta-label">To:</span>
+                            <div class="email-address" id="emailTo"></div>
+                        </div>
+                        <div class="email-date-line">
+                            <span class="meta-label">Date:</span>
+                            <div id="emailDate"></div>
+                        </div>
                     </div>
                     <div class="email-attachments" id="emailAttachments"></div>
                 </div>
-                <div class="email-content" id="emailBody"></div>
+                <div class="email-content-wrapper">
+                    <div class="email-content" id="emailBody"></div>
+                </div>
             </div>
             <div class="composer fade-in" id="emailComposer" style="display: none;">
-                <div class="header">New Message</div>
-                <div class="field">
-                    <select id="serviceSelect">
-                        <option value="">Select email service</option>
-                        <option value="gmail">Gmail</option>
-                    </select>
+                <div class="composer-header">
+                    <h2>New Message</h2>
+                    <div class="composer-actions">
+                        <button class="minimize-btn">_</button>
+                        <button class="close-btn">×</button>
+                    </div>
                 </div>
-                <div class="field">
-                    <input type="text" id="toField" placeholder="To">
+                <div class="composer-body">
+                    <div class="field">
+                        <input type="text" id="toField" placeholder="To">
+                        <button class="cc-bcc-btn">Cc/Bcc</button>
+                    </div>
+                    <div class="cc-bcc-fields" style="display: none;">
+                        <div class="field">
+                            <input type="text" id="ccField" placeholder="Cc">
+                        </div>
+                        <div class="field">
+                            <input type="text" id="bccField" placeholder="Bcc">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <input type="text" id="subjectField" placeholder="Subject">
+                    </div>
+                    <div class="composer-toolbar">
+                        <div class="toolbar-group">
+                            <button class="toolbar-btn" data-command="bold" title="Bold">
+                                <i class="fa-solid fa-bold"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="italic" title="Italic">
+                                <i class="fa-solid fa-italic"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="underline" title="Underline">
+                                <i class="fa-solid fa-underline"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="strikeThrough" title="Strike">
+                                <i class="fa-solid fa-strikethrough"></i>
+                            </button>
+                        </div>
+                        <div class="toolbar-group">
+                            <select class="font-family" title="Font">
+                                <option value="Arial">Arial</option>
+                                <option value="Times New Roman">Times New Roman</option>
+                                <option value="Courier New">Courier New</option>
+                            </select>
+                            <select class="font-size" title="Size">
+                                <option value="1">Small</option>
+                                <option value="3" selected>Normal</option>
+                                <option value="5">Large</option>
+                                <option value="7">Huge</option>
+                            </select>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="toolbar-btn" data-command="foreColor" title="Text Color">
+                                <i class="fa-solid fa-palette"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="backColor" title="Highlight">
+                                <i class="fa-solid fa-highlighter"></i>
+                            </button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="toolbar-btn" data-command="justifyLeft" title="Align Left">
+                                <i class="fa-solid fa-align-left"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="justifyCenter" title="Center">
+                                <i class="fa-solid fa-align-center"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="justifyRight" title="Align Right">
+                                <i class="fa-solid fa-align-right"></i>
+                            </button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+                                <i class="fa-solid fa-list-ul"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+                                <i class="fa-solid fa-list-ol"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="outdent" title="Decrease Indent">
+                                <i class="fa-solid fa-outdent"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="indent" title="Increase Indent">
+                                <i class="fa-solid fa-indent"></i>
+                            </button>
+                        </div>
+                        <div class="toolbar-group">
+                            <button class="toolbar-btn" data-command="createLink" title="Insert Link">
+                                <i class="fa-solid fa-link"></i>
+                            </button>
+                            <button class="toolbar-btn" data-command="insertImage" title="Insert Image">
+                                <i class="fa-solid fa-image"></i>
+                            </button>
+                            <label class="toolbar-btn attachment-btn" title="Add Attachment">
+                                <i class="fa-solid fa-paperclip"></i>
+                                <input type="file" multiple style="display: none;">
+                            </label>
+                        </div>
+                    </div>
+                    <div class="editor" id="emailEditor" contenteditable="true"></div>
+                    <div class="composer-footer">
+                        <div class="attachments-list" id="attachmentsList"></div>
+                        <div class="composer-actions">
+                            <button class="send-button" id="sendButton">Send</button>
+                            <button class="save-draft-button">Save Draft</button>
+                            <button class="discard-button">Discard</button>
+                        </div>
+                    </div>
                 </div>
-                <div class="field">
-                    <input type="text" id="subjectField" placeholder="Subject">
-                </div>
-                <div class="field">
-                    <textarea id="bodyField" placeholder="Body"></textarea>
-                </div>
-                <div class="composer-toolbar" id="composerToolbar">
-                    <button class="toolbar-button" data-command="bold" title="Bold">B</button>
-                    <button class="toolbar-button" data-command="italic" title="Italic">I</button>
-                    <button class="toolbar-button" data-command="underline" title="Underline">U</button>
-                    <button class="toolbar-button" data-command="createLink" title="Insert Link">🔗</button>
-                    <button class="toolbar-button" data-command="insertImage" title="Insert Image">📷</button>
-                </div>
-                <div class="rich-editor" id="richEditor" contenteditable="true"></div>
-                <button class="send-button" id="sendButton">Send</button>
             </div>
         </div>
         <div id="loading" class="loading-overlay">
@@ -88,7 +209,20 @@
         </div>
         <div id="notification" class="notification"></div>
     </div>
-    <script src="https://cdn.tiny.cloud/1/xw52tm5xixz73zm57hobthcnp77atyt30kgb0ypf6omd4ets/tinymce/5/tinymce.min.js"></script>
+
+    <!-- Add keyboard shortcut help dialog -->
+    <div class="shortcut-overlay" id="shortcutHelp">
+        <div class="shortcut-dialog">
+            <h2>Keyboard Shortcuts</h2>
+            <div class="shortcut-grid">
+                <div class="shortcut-item">
+                    <span>Compose new email</span>
+                    <span class="shortcut-key">c</span>
+                </div>
+                <!-- Add more shortcuts -->
+            </div>
+        </div>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>
