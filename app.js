@@ -2,6 +2,7 @@ import { UIHandler } from './uihandler.js';
 import { EmailOperations } from './emailoperations.js';
 import { Helpers } from './helpers.js';
 import { showNotification, showLoading } from './shared/utils.js';
+import { Astro } from './ai/Astro.js';
 
 class EmailApp {
     constructor() {
@@ -42,11 +43,27 @@ class EmailApp {
             'SPAM': 'SPAM'
         };
 
+        // Initialize emailCategories
+        this.emailCategories = {};
+
         // Expose app instance globally for Astro buttons
         window.app = this;
 
+        // Add login overlay reference
+        this.loginOverlay = document.getElementById('loginOverlay');
+
+        // Check auth state on start
+        if (this.accessToken) {
+            this.hideLoginOverlay();
+        } else {
+            this.showLoginOverlay();
+        }
+
         // --- Initialization ---
         this.initialize();
+
+        // Initialize AI features
+        Astro.init();
     }
 
     async initialize() {
@@ -326,12 +343,26 @@ class EmailApp {
         if (response.access_token) {
             this.accessToken = response.access_token;
             localStorage.setItem('accessToken', response.access_token);
-            // Optionally, store userEmail if available (or fetch via API)
-            if (response.email) {
-                this.userEmail = response.email;
-                localStorage.setItem('userEmail', response.email);
+            
+            this.hideLoginOverlay();
+            document.getElementById('emailControls').style.display = 'block';
+            
+            try {
+                // Get user info
+                const userInfo = await gapi.client.gmail.users.getProfile({
+                    userId: 'me'
+                });
+                
+                if (userInfo.result.emailAddress) {
+                    this.userEmail = userInfo.result.emailAddress;
+                    localStorage.setItem('userEmail', userInfo.result.emailAddress);
+                }
+                
+                await this.setupAfterAuth();
+            } catch (error) {
+                console.error('Error getting user info:', error);
+                this.handleAuthError(error);
             }
-            await this.setupAfterAuth();
         } else {
             this.handleAuthError({ message: "No access token received" });
         }
@@ -340,6 +371,30 @@ class EmailApp {
     handleAuthError(error) {
         console.error('Auth error:', error);
         this.showNotification(`Authentication failed: ${error.message || 'Unknown error'}`, 'error');
+    }
+
+    showLoginOverlay() {
+        if (this.loginOverlay) {
+            this.loginOverlay.style.display = 'flex';
+            document.querySelector('.app').classList.remove('authenticated');
+        }
+    }
+
+    hideLoginOverlay() {
+        if (this.loginOverlay) {
+            this.loginOverlay.style.display = 'none';
+            document.querySelector('.app').classList.add('authenticated');
+        }
+    }
+
+    handleAuthExpired() {
+        this.showLoginOverlay();
+        this.isAuthenticated = false;
+        this.accessToken = null;
+        this.userEmail = null;
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('userEmail');
+        document.getElementById('emailControls').style.display = 'none';
     }
 
     static getInstance() {

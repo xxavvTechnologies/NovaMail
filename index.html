@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nova Mail</title>
-    <link rel="icon" type="image/x-icon" href="https://static.wixstatic.com/media/5f23d5_4387cca31dd1410c8680c07f39ab8089~mv2.png">
     <link rel="stylesheet" href="styles.css">
     <script>
         window.onerror = function(msg, url, line, col, error) {
@@ -28,39 +27,29 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-<<<<<<< HEAD
-    <script src="https://apis.google.com/js/api.js" async defer></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-=======
     <script src="https://apis.google.com/js/api.js"></script>
     <script src="https://accounts.google.com/gsi/client"></script>
->>>>>>> 769f276 (0.1.0-alpha)
 </head>
 <body>
-    <!-- Change the login overlay section to this -->
+    <!-- Add this before the app div -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-modal">
-            <!-- ...existing login modal content... -->
+            <img src="https://static.wixstatic.com/media/5f23d5_4387cca31dd1410c8680c07f39ab8089~mv2.png" alt="NovaMail" class="login-logo">
+            <h1>Welcome to NovaMail</h1>
+            <p>Your modern email experience begins here</p>
+            <button class="google-signin-btn" id="loginBtn">
+                <i class="fa-brands fa-google"></i>
+                Sign in with Google
+            </button>
         </div>
     </div>
 
     <div class="app">
         <div class="sidebar">
-            <!-- Add login button here -->
-            <button id="loginBtn" class="login-button">
-                <i class="fa-brands fa-google"></i>
-                Sign in with Google
-            </button>
+            <!-- Remove the auth-section div and just keep emailControls -->
             <div id="emailControls" style="display: none;">
                 <button class="new-email-button" id="newEmailBtn">New Email</button>
                 <div class="folder-list">
-<<<<<<< HEAD
-                    <button class="folder active" data-folder="INBOX">Inbox</button>
-                    <button class="folder" data-folder="SENT">Sent</button>
-                    <button class="folder" data-folder="DRAFT">Drafts</button>
-                    <button class="folder" data-folder="TRASH">Trash</button>
-                    <button class="folder" data-folder="SPAM">Spam</button>
-=======
                     <button class="folder active" data-folder="INBOX">
                         <i class="fa-solid fa-inbox"></i>
                         Inbox
@@ -81,7 +70,6 @@
                         <i class="fa-solid fa-ban"></i>
                         Spam
                     </button>
->>>>>>> 769f276 (0.1.0-alpha)
                 </div>
             </div>
         </div>
@@ -109,11 +97,8 @@
                     </button>
                 </div>
             </div>
-<<<<<<< HEAD
-=======
             <!-- Add this div for category tabs -->
             <div class="category-tabs"></div>
->>>>>>> 769f276 (0.1.0-alpha)
             <div class="email-list" id="emailList"></div>
         </div>
         <div class="main-content">
@@ -122,21 +107,6 @@
             </div>
             <div class="email-view fade-in" id="emailView" style="display: none;">
                 <div class="email-header">
-<<<<<<< HEAD
-                    <h2 id="emailSubject"></h2>
-                    <div class="email-meta">
-                        <div class="email-address-line">
-                            <span class="meta-label">From:</span>
-                            <div class="email-address" id="emailFrom"></div>
-                        </div>
-                        <div class="email-address-line">
-                            <span class="meta-label">To:</span>
-                            <div class="email-address" id="emailTo"></div>
-                        </div>
-                        <div class="email-date-line">
-                            <span class="meta-label">Date:</span>
-                            <div id="emailDate"></div>
-=======
                     <button class="back-button" id="backToList">
                         <i class="fa-solid fa-arrow-left"></i>
                         Back to Inbox
@@ -198,7 +168,6 @@
                                 <i class="fa-solid fa-share"></i>
                                 Forward
                             </button>
->>>>>>> 769f276 (0.1.0-alpha)
                         </div>
                     </div>
                 </div>
@@ -210,17 +179,12 @@
                 <div class="composer-header">
                     <h2>New Message</h2>
                     <div class="composer-actions">
-<<<<<<< HEAD
-                        <button class="minimize-btn">_</button>
-                        <button class="close-btn">×</button>
-=======
                         <button class="minimize-btn" title="Minimize">
                             <i class="fa-solid fa-minus"></i>
                         </button>
                         <button class="close-btn" title="Close">
                             <i class="fa-solid fa-xmark"></i>
                         </button>
->>>>>>> 769f276 (0.1.0-alpha)
                     </div>
                 </div>
                 <div class="composer-body">
@@ -344,9 +308,6 @@
             </div>
         </div>
     </div>
-<<<<<<< HEAD
-    <script src="app.js"></script>
-=======
     <!-- AI Popup Container (initially hidden) -->
     <div id="aiPopup" style="display:none;">
         <div class="popup-content">
@@ -356,6 +317,5 @@
     </div>
     <!-- Load the main app module -->
     <script type="module" src="app.js"></script>
->>>>>>> 769f276 (0.1.0-alpha)
 </body>
 </html>

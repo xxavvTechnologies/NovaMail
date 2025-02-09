@@ -122,9 +122,9 @@ export function categorizeEmail(email) {
     ).category;
 }
 
-function calculateCategoryScore(emailContent, rules) {
+export function calculateCategoryScore(emailContent, rules) {
     let score = 0;
-    const fullContent = `${emailContent.subject} ${emailContent.snippet} ${emailContent.body}`;
+    const fullContent = `${emailContent.subject} ${emailContent.snippet} ${emailContent.content}`;
 
     // Domain matching (highest weight)
     if (rules.domains) {

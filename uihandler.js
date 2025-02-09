@@ -4,25 +4,15 @@ import { getCategoryDetails } from './categories.js';
 // --- MARKER: START OF UI AND EVENT HANDLING SECTION ---
 // UI setup and event listeners
 function setupEventListeners() {
-    // Add null checks for all event listeners
-    const loginBtn = document.getElementById('loginBtn');
-    if (loginBtn) {
-        loginBtn.addEventListener('click', () => this.handleAuthClick());
-    }
+    document.getElementById('newEmailBtn').addEventListener('click', () => {
+        document.getElementById('emailComposer').style.display = 'block';
+        document.getElementById('emailView').style.display = 'none';
+        document.getElementById('noSelection').style.display = 'none';
+    });
 
-    const newEmailBtn = document.getElementById('newEmailBtn');
-    if (newEmailBtn) {
-        newEmailBtn.addEventListener('click', () => {
-            document.getElementById('emailComposer').style.display = 'block';
-            document.getElementById('emailView').style.display = 'none';
-            document.getElementById('noSelection').style.display = 'none';
-        });
-    }
-
-    const sendButton = document.getElementById('sendButton');
-    if (sendButton) {
-        sendButton.addEventListener('click', () => this.sendEmail());
-    }
+    document.getElementById('sendButton').addEventListener('click', () => {
+        this.sendEmail();
+    });
 
     document.getElementById('loginBtn').addEventListener('click', () => this.handleAuthClick());
 
@@ -197,12 +187,27 @@ function showEmail(email) {
     // Update selected email
     this.selectedEmail = email;
     
-    // Show email view
+    // Show email view with slide animation
+    const listContainer = document.querySelector('.email-list-container');
     const emailView = document.getElementById('emailView');
-    emailView.classList.add('visible');
     
-    // Hide composer if it's open
-    document.getElementById('emailComposer').classList.remove('visible');
+    emailView.style.display = 'flex';
+    setTimeout(() => {
+        listContainer.style.transform = 'translateX(-100%)';
+        emailView.classList.add('visible');
+    }, 10);
+
+    // Setup back button
+    document.getElementById('backToList').onclick = () => {
+        listContainer.style.transform = 'translateX(0)';
+        emailView.classList.remove('visible');
+        setTimeout(() => emailView.style.display = 'none', 300);
+    };
+
+    // Setup quick action buttons
+    document.getElementById('quickReply').onclick = () => this.replyToEmail();
+    document.getElementById('quickReplyAll').onclick = () => this.replyAllToEmail();
+    document.getElementById('quickForward').onclick = () => this.forwardEmail();
 
     // Update email content
     // Mark as selected for context menu
@@ -261,23 +266,6 @@ function showEmail(email) {
     
     // Update email item in list
     UIHandler.renderEmailItem.call(this, email);
-}
-
-function showComposer() {
-    // Show composer
-    const composer = document.getElementById('emailComposer');
-    composer.classList.add('visible');
-    
-    // Hide email view if it's open
-    document.getElementById('emailView').classList.remove('visible');
-}
-
-function hideEmailView() {
-    document.getElementById('emailView').classList.remove('visible');
-}
-
-function hideComposer() {
-    document.getElementById('emailComposer').classList.remove('visible');
 }
 
 function showAIPopup(content) {
@@ -671,9 +659,6 @@ export const UIHandler = {
     setupEventListeners,
     renderEmails,
     showEmail,
-    showComposer,
-    hideEmailView,
-    hideComposer,
     setupContextMenus,
     showContextMenu, // Add this
     initializeComposer,

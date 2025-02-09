@@ -1,4 +1,5 @@
 import { showNotification, showLoading } from './shared/utils.js';
+import { categories, categorizeEmail, calculateCategoryScore } from './categories.js';
 
 // Add handleEmailOperation near the top with other core email functions
 async function handleEmailOperation(operation) {
@@ -47,9 +48,9 @@ async function loadEmails(folderId = 'INBOX') {
             });
         });
         
+        console.log('Gmail API response:', response); // Debug log
         if (!response?.result?.messages) {
-            this.emails = [];
-            this.renderEmails();
+            console.warn('No messages found');
             return;
         }
 
@@ -57,6 +58,7 @@ async function loadEmails(folderId = 'INBOX') {
         const BATCH_SIZE = 10;
         const messageIds = response.result.messages;
         this.emails = [];
+        this.emailCategories = {}; // Reset categories
 
         // Process batches sequentially
         for (let i = 0; i < messageIds.length; i += BATCH_SIZE) {
@@ -79,8 +81,20 @@ async function loadEmails(folderId = 'INBOX') {
             this.emails.push(...parsedEmails);
         }
 
+        console.log('Loaded emails:', this.emails.length); // Debug log
+
         // Sort emails by date (newest first)
         this.emails.sort((a, b) => b.date - a.date);
+
+        // Categorize emails
+        this.emails.forEach(email => {
+            email.category = categorizeEmail(email);
+            const category = email.category;
+            if (!this.emailCategories[category]) {
+                this.emailCategories[category] = [];
+            }
+            this.emailCategories[category].push(email);
+        });
         
         this.renderEmails();
     } catch (err) {
@@ -1325,81 +1339,6 @@ function markAsSpam() {
     if (!this.selectedEmail) return;
     this.moveToSpam(this.selectedEmail.id);
 }
-
-function categorizeEmail(email) {
-    // First check for explicit categories from Gmail
-    if (email.labelIds) {
-        if (email.labelIds.includes('CATEGORY_SOCIAL')) return 'social';
-        if (email.labelIds.includes('CATEGORY_PROMOTIONS')) return 'promotions';
-        if (email.labelIds.includes('CATEGORY_UPDATES')) return 'updates';
-        if (email.labelIds.includes('CATEGORY_FORUMS')) return 'forums';
-    }
-
-    // Get scores for each category
-    const scores = Object.entries(categories).map(([category, config]) => {
-        const score = this.calculateCategoryScore(email, config.rules);
-        return { category, score };
-    });
-
-    // Make it easier for emails to be classified as primary
-    const highestScore = Math.max(...scores.map(s => s.score));
-    const primaryScore = scores.find(s => s.category === 'primary')?.score || 0;
-
-    // If no category has a significantly higher score, default to primary
-    if (highestScore - primaryScore < 3) {
-        return 'primary';
-    }
-
-    // Otherwise, use the highest scoring category
-    return scores.reduce((prev, curr) => 
-        curr.score > prev.score ? curr : prev
-    ).category;
-}
-
-function calculateCategoryScore(emailContent, rules) {
-    let score = 0;
-    const fullContent = `${emailContent.subject} ${emailContent.snippet} ${emailContent.body}`;
-
-    // Domain matching (highest weight)
-    if (rules.domains) {
-        rules.domains.forEach(domain => {
-            if (emailContent.from.includes(domain)) {
-                score += 5;
-            }
-        });
-    }
-
-    // Sender pattern matching
-    if (rules.senderPatterns) {
-        rules.senderPatterns.forEach(pattern => {
-            if (pattern.test(emailContent.from)) {
-                score += 3;
-            }
-        });
-    }
-
-    // Keyword matching
-    if (rules.keywords) {
-        rules.keywords.forEach(keyword => {
-            // Use word boundary matching for more accurate results
-            const regex = new RegExp(`\\b${keyword}\\b`, 'i');
-            if (regex.test(fullContent)) {
-                score += 1;
-            }
-            // Extra weight for keywords in subject
-            if (regex.test(emailContent.subject)) {
-                score += 2;
-            }
-        });
-    }
-
-    // Priority boost
-    if (rules.priority === 'high' && score > 0) {
-        score *= 1.5;
-    }
-
-    return score;
-}
 // --- MARKER: END OF EMAIL OPERATIONS SECTION ---
 
 export const EmailOperations = {
@@ -1467,7 +1406,5 @@ export const EmailOperations = {
     toggleShortcutHelp,
     archiveEmail,
     deleteEmail,
-    markAsSpam,
-    categorizeEmail,
-    calculateCategoryScore
+    markAsSpam
 };

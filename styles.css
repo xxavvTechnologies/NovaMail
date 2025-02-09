@@ -38,16 +38,6 @@ body {
     font-family: var(--inter);
     color: var(--color-text);
     line-height: 1.6;
-<<<<<<< HEAD
-}
-
-h1, h2, h3, h4, h5, h6,
-.new-email-button,
-.login-button,
-.folder {
-    font-family: var(--space-grotesk);
-=======
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 h1, h2, h3, h4, h5, h6,
@@ -57,61 +47,29 @@ h1, h2, h3, h4, h5, h6,
     font-family: var(--space-grotesk);
 }
 
-/* Fix main layout */
+/* Fix main app layout */
 .app {
     display: grid;
-<<<<<<< HEAD
-    grid-template-columns: 220px minmax(350px, 400px) 1fr;
-    height: 100vh;
-    background-color: var(--color-background);
-=======
     grid-template-columns: 280px 1fr;
-    min-height: 100vh;
-    max-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
     background-color: var(--color-white);
->>>>>>> 769f276 (0.1.0-alpha)
-    gap: 0;
 }
 
-/* Fix sidebar */
+/* Fix sidebar styling */
 .sidebar {
+    height: 100vh;
+    overflow-y: auto;
     background-color: var(--color-white);
-<<<<<<< HEAD
-    padding: var(--spacing-xl);
     border-right: 1px solid var(--color-border);
+    padding: var(--spacing-lg) 0;
     display: flex;
     flex-direction: column;
     gap: var(--spacing-lg);
-=======
-    padding: var(--spacing-lg) 0;
-    border-right: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    overflow-y: auto;
-    position: sticky;
-    top: 0;
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .new-email-button {
     width: 100%;
-<<<<<<< HEAD
-    padding: var(--spacing-md) var(--spacing-xl);
-    background-color: var(--color-primary);
-    color: var(--color-white);
-    border: none;
-    border-radius: 16px;
-    font-size: 15px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
-}
-
-.new-email-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-=======
     margin: 0 var(--spacing-md) var(--spacing-lg);
     padding: var(--spacing-md);
     background-color: var(--color-primary);
@@ -123,7 +81,6 @@ h1, h2, h3, h4, h5, h6,
     cursor: pointer;
     transition: all 0.2s ease;
     box-shadow: var(--shadow-sm);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .new-email-button:hover {
@@ -132,14 +89,12 @@ h1, h2, h3, h4, h5, h6,
     box-shadow: var(--shadow-md);
 }
 
-/* Fix main content area */
+/* Main content area */
 .main-content {
-<<<<<<< HEAD
-    padding: var(--spacing-xl);
-=======
     position: relative;
     height: 100vh;
     overflow: hidden;
+    background: var(--color-white);
     display: flex;
     flex-direction: column;
 }
@@ -147,54 +102,35 @@ h1, h2, h3, h4, h5, h6,
 /* Fix email list container */
 .email-list-container {
     position: relative;
-    width: 100%;
     height: 100vh;
-    background: var(--color-white);
     display: flex;
     flex-direction: column;
-    z-index: 1;
+    background: var(--color-white);
+    overflow: hidden;
 }
 
 .email-list {
     flex: 1;
->>>>>>> 769f276 (0.1.0-alpha)
     overflow-y: auto;
-    padding: 0;
+    padding: var(--spacing-md);
 }
 
-/* Fix email view */
+/* Fix email view as overlay */
 .email-view {
-    position: fixed;
-    top: 0;
-    left: 280px; /* Match sidebar width */
-    right: 0;
-    bottom: 0;
+    position: absolute;
+    inset: 0;
     background: var(--color-white);
-    z-index: 100;
-    display: none;
-    flex-direction: column;
-    transform: translateX(0);
+    transform: translateX(100%);
     transition: transform 0.3s ease;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
 }
 
 .email-view.visible {
-    display: flex;
+    transform: translateX(0);
 }
 
-<<<<<<< HEAD
-.email-list {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xs);
-}
-
-.email-item {
-    display: flex;
-    flex-direction: column;
-    padding: var(--spacing-md);
-    border-bottom: 1px solid var(--color-border);
-    gap: var(--spacing-xs);
-=======
 .email-item {
     display: flex;
     align-items: center;
@@ -207,7 +143,6 @@ h1, h2, h3, h4, h5, h6,
 
 .email-item:hover {
     background-color: var(--color-hover);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-item-header {
@@ -218,8 +153,6 @@ h1, h2, h3, h4, h5, h6,
 
 .email-item.selected {
     background-color: var(--color-primary-light);
-<<<<<<< HEAD
-=======
     border-left: 3px solid var(--color-primary);
 }
 
@@ -230,7 +163,6 @@ h1, h2, h3, h4, h5, h6,
 
 .email-item.drag-over {
     border-top: 2px solid var(--color-primary);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-actions {
@@ -259,11 +191,7 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .action-btn:hover {
-<<<<<<< HEAD
-    background-color: var(--color-hover);
-=======
     background-color: var(--color-primary-light);
->>>>>>> 769f276 (0.1.0-alpha)
     color: var(--color-primary);
 }
 
@@ -275,22 +203,6 @@ h1, h2, h3, h4, h5, h6,
 
 .folder {
     padding: var(--spacing-md) var(--spacing-lg);
-<<<<<<< HEAD
-    border-radius: 12px;
-    margin: 2px 0;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 500;
-}
-
-.folder:hover {
-    background-color: var(--color-primary-light);
-    color: var(--color-primary);
-}
-
-.folder.active {
-    background-color: var(--color-primary-light);
-=======
     border-radius: 0;
     margin: 0;
     position: relative;
@@ -305,33 +217,15 @@ h1, h2, h3, h4, h5, h6,
 
 .folder:hover {
     background-color: var(--color-hover);
-    color: var (--color-primary);
+    color: var(--color-primary);
 }
 
 .folder.active {
     background-color: transparent;
->>>>>>> 769f276 (0.1.0-alpha)
     color: var(--color-primary);
     font-weight: 600;
 }
 
-<<<<<<< HEAD
-.email-view {
-    background: var(--color-white);
-    border-radius: 16px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    padding: var(--spacing-xl);
-    height: calc(100vh - var(--spacing-xl) * 2);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-lg);
-}
-
-.email-header {
-    padding-bottom: var(--spacing-lg);
-    border-bottom: 1px solid var(--color-border);
-    margin-bottom: var(--spacing-lg);
-=======
 .folder.active::before {
     content: '';
     position: absolute;
@@ -361,17 +255,17 @@ h1, h2, h3, h4, h5, h6,
     background: var(--color-white);
 }
 
+/* Style back button */
 .back-button {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
     padding: var(--spacing-md);
-    color: var(--color-text-secondary);
-    font-size: 14px;
-    cursor: pointer;
-    border: none;
     background: none;
-    margin-bottom: var(--spacing-md);
+    border: none;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-size: 14px;
 }
 
 .back-button:hover {
@@ -385,7 +279,7 @@ h1, h2, h3, h4, h5, h6,
 .header-main {
     display: flex;
     flex-direction: column;
-    gap: var (--spacing-xs);
+    gap: var(--spacing-xs);
 }
 
 .header-top {
@@ -426,7 +320,6 @@ h1, h2, h3, h4, h5, h6,
 
 .email-address {
     color: var(--color-text);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-header h2 {
@@ -453,21 +346,6 @@ h1, h2, h3, h4, h5, h6,
     font-weight: 500;
 }
 
-<<<<<<< HEAD
-.composer {
-    background: var(--color-white);
-    border-radius: 16px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    padding: var(--spacing-xl);
-    position: fixed;
-    bottom: 0;
-    right: 30px;
-    width: 600px;
-    height: 600px;
-    display: flex;
-    flex-direction: column;
-    z-index: 1000;
-=======
 /* Quick action buttons */
 .quick-actions {
     display: flex;
@@ -496,20 +374,24 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .composer {
+    position: absolute;
+    inset: 0;
+    background: var(--color-white);
+    z-index: 1000;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
     position: fixed;
     top: 0;
     left: 280px; /* Match sidebar width */
     right: 0;
     bottom: 0;
     background: var(--color-white);
-    z-index: 100;
-    display: none;
-    flex-direction: column;
-}
-
-.composer.visible {
+    z-index: 20;
     display: flex;
->>>>>>> 769f276 (0.1.0-alpha)
+    flex-direction: column;
 }
 
 .composer.minimized {
@@ -518,11 +400,7 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .composer-header {
-<<<<<<< HEAD
-    padding: var(--spacing-md);
-=======
     padding: var(--spacing-lg);
->>>>>>> 769f276 (0.1.0-alpha)
     border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
@@ -549,14 +427,8 @@ h1, h2, h3, h4, h5, h6,
 
 .composer-body {
     flex: 1;
-<<<<<<< HEAD
-    display: flex;
-    flex-direction: column;
-    padding: var(--spacing-md);
-=======
     overflow: auto;
     padding: var(--spacing-lg);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .composer-toolbar {
@@ -642,14 +514,11 @@ h1, h2, h3, h4, h5, h6,
     cursor: pointer;
     padding: 2px;
     color: var(--color-text-secondary);
-<<<<<<< HEAD
-=======
     display: flex;
     align-items: center;
     justify-content: center;
     width: 20px;
     height: 20px;
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .cc-bcc-btn {
@@ -698,12 +567,9 @@ h1, h2, h3, h4, h5, h6,
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-<<<<<<< HEAD
-=======
     font-weight: 500;
     flex-shrink: 0;
     min-width: 180px;
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-content-preview {
@@ -711,12 +577,9 @@ h1, h2, h3, h4, h5, h6,
     flex-direction: row;
     gap: 8px;
     overflow: hidden;
-<<<<<<< HEAD
-=======
     align-items: center;
     gap: var(--spacing-md);
     flex: 1;
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-subject {
@@ -725,10 +588,7 @@ h1, h2, h3, h4, h5, h6,
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-<<<<<<< HEAD
-=======
     font-weight: 500;
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-snippet {
@@ -738,22 +598,16 @@ h1, h2, h3, h4, h5, h6,
     overflow: hidden;
     text-overflow: ellipsis;
     flex-grow: 1;
-<<<<<<< HEAD
-=======
     color: var(--color-text-secondary);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-date {
     color: #5f6368;
     font-size: 12px;
     white-space: nowrap;
-<<<<<<< HEAD
-=======
     flex-shrink: 0;
     margin-left: auto;
     padding-left: var(--spacing-md);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-attachment {
@@ -898,16 +752,11 @@ h1, h2, h3, h4, h5, h6,
     flex: 1;
 }
 
+/* Fix email content scrolling */
 .email-content-wrapper {
     flex: 1;
-<<<<<<< HEAD
     overflow-y: auto;
-    padding: 16px 0;
-=======
-    overflow: auto;
     padding: var(--spacing-lg);
-    background: var(--color-white);
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-content {
@@ -915,19 +764,6 @@ h1, h2, h3, h4, h5, h6,
     font-size: 14px;
     line-height: 1.6;
     color: #202124;
-<<<<<<< HEAD
-    max-width: 100%;
-    overflow-wrap: break-word;
-    word-wrap: break-word;
-    word-break: break-word;
-}
-
-.email-content-inner {
-    padding: 16px;
-    background: #ffffff;
-    border-radius: 4px;
-    overflow-x: auto; /* For wide content */
-=======
     max-width: 900px;
     margin: 0 auto;
     overflow-wrap: break-word;
@@ -942,7 +778,6 @@ h1, h2, h3, h4, h5, h6,
     border-radius: 4px;
     overflow-x: auto; /* For wide content */
     max-width: 100%;
->>>>>>> 769f276 (0.1.0-alpha)
 }
 
 .email-content img {
@@ -968,8 +803,6 @@ h1, h2, h3, h4, h5, h6,
     font-family: monospace;
 }
 
-<<<<<<< HEAD
-=======
 .email-content table,
 .email-content th,
 .email-content td {
@@ -1005,7 +838,6 @@ h1, h2, h3, h4, h5, h6,
     height: auto !important;
 }
 
->>>>>>> 769f276 (0.1.0-alpha)
 .email-content table {
     width: 100% !important;
     max-width: 100% !important;
@@ -1163,13 +995,8 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .spam-warning::before {
-<<<<<<< HEAD
-    content: '\f071'; /* Font Awesome warning icon */
-    font-family: 'Font Awesome 6 Free';
-=======
     font-family: 'Font Awesome 6 Free';
     content: '\f071';
->>>>>>> 769f276 (0.1.0-alpha)
     font-weight: 900;
     position: absolute;
     left: -20px;
@@ -1202,45 +1029,6 @@ h1, h2, h3, h4, h5, h6,
     pointer-events: none;
 }
 
-<<<<<<< HEAD
-.email-list-container {
-    background: var(--color-white);
-    border-right: 1px solid var(--color-border);
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.email-list-header {
-    padding: var(--spacing-md);
-    border-bottom: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-}
-
-.search-bar {
-    flex: 1;
-    position: relative;
-}
-
-.search-input {
-    width: 100%;
-    padding: var(--spacing-sm) var(--spacing-md);
-    padding-left: 36px;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    font-family: var(--inter);
-}
-
-.search-icon {
-    position: absolute;
-    left: var(--spacing-sm);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--color-text-secondary);
-    font-size: 14px;
-=======
 /* Add custom scrollbar styling for WebKit browsers */
 .email-list::-webkit-scrollbar {
     width: 6px;
@@ -1272,7 +1060,12 @@ h1, h2, h3, h4, h5, h6,
     border-bottom: 1px solid var(--color-border);
     background: var(--color-white);
     z-index: 1;
->>>>>>> 769f276 (0.1.0-alpha)
+    position: sticky;
+    top: 0;
+    background: var(--color-white);
+    z-index: 5;
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
 }
 
 .shortcut-overlay {
@@ -1324,8 +1117,6 @@ h1, h2, h3, h4, h5, h6,
     color: var(--color-text-secondary);
     font-size: 14px;
 }
-<<<<<<< HEAD
-=======
 
 .search-bar {
     position: relative;
@@ -1343,7 +1134,7 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .search-input:focus {
-    background-color: var(--color-white);
+    background-color: var (--color-white);
     border-color: var (--color-primary);
     outline: none;
     box-shadow: 0 0 0 3px var(--color-primary-light);
@@ -1370,6 +1161,11 @@ h1, h2, h3, h4, h5, h6,
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
     white-space: nowrap;
+    position: sticky;
+    top: 72px; /* Adjust based on header height */
+    background: var(--color-white);
+    z-index: 4;
+    border-bottom: 1px solid var(--color-border);
 }
 
 .category-tabs::-webkit-scrollbar {
@@ -1503,7 +1299,7 @@ h1, h2, h3, h4, h5, h6,
 .astro-header {
     padding: var(--spacing-md);
     background: var(--color-primary);
-    color: var(--color-white);
+    color: var (--color-white);
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -1582,7 +1378,7 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .astro-use-btn:hover {
-    background: var (--color-primary-dark);
+    background: var(--color-primary-dark);
     transform: translateY(-1px);
 }
 
@@ -1613,53 +1409,53 @@ h1, h2, h3, h4, h5, h6,
     align-items: center;
     gap: var (--spacing-xs);
     padding: var (--spacing-xs) var (--spacing-sm);
-    border: 1px solid var(--color-border);
+    border: 1px solid var (--color-border);
     border-radius: var (--radius-sm);
-    background: var(--color-white);
+    background: var (--color-white);
     cursor: pointer;
     transition: all 0.2s ease;
     font-size: 13px;
 }
 
 .astro-btn:hover {
-    background: var(--color-hover);
-    border-color: var(--color-primary);
+    background: var (--color-hover);
+    border-color: var (--color-primary);
 }
 
 /* Context Menu Styles */
 .context-menu {
     position: fixed;
-    background: var(--color-white);
-    border-radius: var(--radius-sm);
-    box-shadow: var(--shadow-lg);
+    background: var (--color-white);
+    border-radius: var (--radius-sm);
+    box-shadow: var (--shadow-lg);
     min-width: 200px;
     z-index: 1000;
-    padding: var(--spacing-xs);
+    padding: var (--spacing-xs);
 }
 
 .menu-item {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm) var(--spacing-md);
+    gap: var (--spacing-sm);
+    padding: var (--spacing-sm) var (--spacing-md);
     cursor: pointer;
-    border-radius: var(--radius-sm);
+    border-radius: var (--radius-sm);
     font-size: 14px;
 }
 
 .menu-item:hover {
-    background: var(--color-hover);
+    background: var (--color-hover);
 }
 
 .menu-item i {
     width: 16px;
-    color: var(--color-text-secondary);
+    color: var (--color-text-secondary);
 }
 
 .separator {
     height: 1px;
-    background: var(--color-border);
-    margin: var(--spacing-xs) 0;
+    background: var (--color-border);
+    margin: var (--spacing-xs) 0;
 }
 
 /* AI Popup Styles */
@@ -1668,61 +1464,61 @@ h1, h2, h3, h4, h5, h6,
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    background: var(--color-white);
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-lg);
-    padding: var(--spacing-lg);
+    background: var (--color-white);
+    border-radius: var (--radius-md);
+    box-shadow: var (--shadow-lg);
+    padding: var (--spacing-lg);
     z-index: 1100;
     width: 80%;
     max-width: 600px;
 }
 
 .popup-content {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var (--spacing-md);
 }
 
 #closeAIPopup {
-    padding: var(--spacing-sm) var(--spacing-md);
-    background: var(--color-primary);
-    color: var(--color-white);
+    padding: var (--spacing-sm) var (--spacing-md);
+    background: var (--color-primary);
+    color: var (--color-white);
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var (--radius-sm);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 #closeAIPopup:hover {
-    background: var(--color-primary-dark);
+    background: var (--color-primary-dark);
 }
 
 /* AI Features Section */
 .ai-features {
-    margin-top: var(--spacing-xs);
-    padding: var(--spacing-xs);
-    background: var(--color-primary-light);
-    border-radius: var(--radius-sm);
+    margin-top: var (--spacing-xs);
+    padding: var (--spacing-xs);
+    background: var (--color-primary-light);
+    border-radius: var (--radius-sm);
 }
 
 .ai-features-title {
     font-size: 12px;
-    color: var(--color-primary);
-    margin-bottom: var(--spacing-xs);
+    color: var (--color-primary);
+    margin-bottom: var (--spacing-xs);
     display: inline-block;
 }
 
 .ai-buttons {
     display: flex;
-    gap: var(--spacing-xs);
+    gap: var (--spacing-xs);
     flex-wrap: wrap;
 }
 
 .ai-btn {
     font-size: 12px;
     padding: 4px 8px;
-    border: 1px solid var(--color-primary);
-    border-radius: var(--radius-sm);
-    background: var(--color-white);
-    color: var(--color-primary);
+    border: 1px solid var (--color-primary);
+    border-radius: var (--radius-sm);
+    background: var (--color-white);
+    color: var (--color-primary);
     cursor: pointer;
     transition: all 0.2s ease;
     display: inline-flex;
@@ -1731,8 +1527,8 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .ai-btn:hover {
-    background: var(--color-primary);
-    color: var(--color-white);
+    background: var (--color-primary);
+    color: var (--color-white);
 }
 
 .ai-btn i {
@@ -1740,78 +1536,78 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .ai-results {
-    margin-top: var(--spacing-sm);
+    margin-top: var (--spacing-sm);
     font-size: 13px;
 }
 
 .ai-response {
     margin-top: var (--spacing-sm);
-    padding: var(--spacing-sm);
-    border-radius: var(--radius-sm);
+    padding: var (--spacing-sm);
+    border-radius: var (--radius-sm);
     font-size: 13px;
 }
 
 .ai-response.loading {
-    background: var(--color-background);
-    color: var(--color-text-secondary);
+    background: var (--color-background);
+    color: var (--color-text-secondary);
     text-align: center;
-    padding: var(--spacing-md);
+    padding: var (--spacing-md);
 }
 
 .ai-response.loading i {
-    margin-right: var(--spacing-xs);
+    margin-right: var (--spacing-xs);
     animation: spin 1s linear infinite;
 }
 
 .ai-response.error {
     background: #fdeded;
-    color: var(--color-error);
-    padding: var(--spacing-sm);
+    color: var (--color-error);
+    padding: var (--spacing-sm);
 }
 
 .ai-response.success {
-    background: var(--color-background);
-    border-left: 3px solid var(--color-primary);
+    background: var (--color-background);
+    border-left: 3px solid var (--color-primary);
 }
 
 .ai-response h4 {
-    color: var(--color-primary);
-    margin: 0 0 var(--spacing-xs) 0;
+    color: var (--color-primary);
+    margin: 0 0 var (--spacing-xs) 0;
 }
 
 .ai-processing {
-    padding: var(--spacing-sm);
-    color: var(--color-text-secondary);
+    padding: var (--spacing-sm);
+    color: var (--color-text-secondary);
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-    background: var(--color-background);
-    border-radius: var(--radius-sm);
-    margin-top: var(--spacing-sm);
+    gap: var (--spacing-sm);
+    background: var (--color-background);
+    border-radius: var (--radius-sm);
+    margin-top: var (--spacing-sm);
 }
 
 .ai-result {
-    padding: var(--spacing-sm);
-    background: var(--color-white);
-    border-left: 3px solid var(--color-primary);
-    margin-top: var(--spacing-sm);
+    padding: var (--spacing-sm);
+    background: var (--color-white);
+    border-left: 3px solid var (--color-primary);
+    margin-top: var (--spacing-sm);
 }
 
 .ai-result h4 {
-    color: var(--color-primary);
-    margin-bottom: var(--spacing-xs);
+    color: var (--color-primary);
+    margin-bottom: var (--spacing-xs);
     font-size: 14px;
 }
 
 .ai-error {
-    padding: var(--spacing-sm);
-    color: var(--color-error);
+    padding: var (--spacing-sm);
+    color: var (--color-error);
     background: #fdeded;
-    border-radius: var(--radius-sm);
-    margin-top: var(--spacing-sm);
+    border-radius: var (--radius-sm);
+    margin-top: var (--spacing-sm);
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
+    gap: var (--spacing-sm);
 }
 
 .ai-features.disabled {
@@ -1830,9 +1626,9 @@ h1, h2, h3, h4, h5, h6,
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.9);
-    border-radius: var(--radius-sm);
+    border-radius: var (--radius-sm);
     font-size: 13px;
-    color: var(--color-text-secondary);
+    color: var (--color-text-secondary);
 }
 
 .ai-btn:disabled {
@@ -1854,10 +1650,10 @@ h1, h2, h3, h4, h5, h6,
 }
 
 .login-modal {
-    background: var(--color-white);
-    padding: var(--spacing-xl);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    background: var (--color-white);
+    padding: var (--spacing-xl);
+    border-radius: var (--radius-lg);
+    box-shadow: var (--shadow-lg);
     text-align: center;
     max-width: 400px;
     width: 90%;
@@ -1866,42 +1662,42 @@ h1, h2, h3, h4, h5, h6,
 .login-logo {
     width: 120px;
     height: auto;
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var (--spacing-lg);
 }
 
 .login-modal h1 {
     font-size: 24px;
-    margin-bottom: var(--spacing-sm);
-    color: var(--color-text);
+    margin-bottom: var (--spacing-sm);
+    color: var (--color-text);
 }
 
 .login-modal p {
-    color: var(--color-text-secondary);
-    margin-bottom: var(--spacing-xl);
+    color: var (--color-text-secondary);
+    margin-bottom: var (--spacing-xl);
 }
 
 .google-signin-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacing-md);
+    gap: var (--spacing-md);
     width: 100%;
-    padding: var(--spacing-md) var(--spacing-lg);
-    background: var(--color-white);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    font-family: var(--space-grotesk);
+    padding: var (--spacing-md) var (--spacing-lg);
+    background: var (--color-white);
+    border: 1px solid var (--color-border);
+    border-radius: var (--radius-lg);
+    font-family: var (--space-grotesk);
     font-size: 16px;
     font-weight: 500;
-    color: var(--color-text);
+    color: var (--color-text);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .google-signin-btn:hover {
-    background: var(--color-hover);
+    background: var (--color-hover);
     transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
+    box-shadow: var (--shadow-md);
 }
 
 .google-signin-btn img {
@@ -1910,13 +1706,20 @@ h1, h2, h3, h4, h5, h6,
 }
 
 /* Hide login overlay when authenticated */
-.app.authenticated .login-overlay {
+.app.authenticated + .login-overlay {
     display: none;
 }
 
-.app.authenticated > .login-overlay,
-.app.authenticated ~ .login-overlay,
-#loginOverlay.hidden {
-    display: none !important;
+.no-selection {
+    position: fixed;
+    top: 0;
+    left: 280px;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-white);
+    color: var(--color-text-secondary);
+    font-size: 16px;
 }
->>>>>>> 769f276 (0.1.0-alpha)
