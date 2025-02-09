@@ -3,11 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NovaMail</title>
+    <title>Nova Mail</title>
+    <link rel="icon" type="image/x-icon" href="https://static.wixstatic.com/media/5f23d5_4387cca31dd1410c8680c07f39ab8089~mv2.png">
     <link rel="stylesheet" href="styles.css">
     <script>
-        window.onerror = function(msg, url, line) {
+        window.onerror = function(msg, url, line, col, error) {
             console.error('Global error:', msg, 'at', url, ':', line);
+            
+            // Ignore ResizeObserver errors as they're not critical
+            if (msg.includes('ResizeObserver')) {
+                return false;
+            }
+            
             const notification = document.getElementById('notification');
             if (notification) {
                 notification.textContent = 'An error occurred. Please refresh the page.';
@@ -21,23 +28,60 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+<<<<<<< HEAD
     <script src="https://apis.google.com/js/api.js" async defer></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+=======
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+>>>>>>> 769f276 (0.1.0-alpha)
 </head>
 <body>
+    <!-- Change the login overlay section to this -->
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-modal">
+            <!-- ...existing login modal content... -->
+        </div>
+    </div>
+
     <div class="app">
         <div class="sidebar">
-            <div class="auth-section" id="authSection">
-                <button class="login-button" id="loginBtn">Sign in with Google</button>
-            </div>
+            <!-- Add login button here -->
+            <button id="loginBtn" class="login-button">
+                <i class="fa-brands fa-google"></i>
+                Sign in with Google
+            </button>
             <div id="emailControls" style="display: none;">
                 <button class="new-email-button" id="newEmailBtn">New Email</button>
                 <div class="folder-list">
+<<<<<<< HEAD
                     <button class="folder active" data-folder="INBOX">Inbox</button>
                     <button class="folder" data-folder="SENT">Sent</button>
                     <button class="folder" data-folder="DRAFT">Drafts</button>
                     <button class="folder" data-folder="TRASH">Trash</button>
                     <button class="folder" data-folder="SPAM">Spam</button>
+=======
+                    <button class="folder active" data-folder="INBOX">
+                        <i class="fa-solid fa-inbox"></i>
+                        Inbox
+                    </button>
+                    <button class="folder" data-folder="SENT">
+                        <i class="fa-solid fa-paper-plane"></i>
+                        Sent
+                    </button>
+                    <button class="folder" data-folder="DRAFT">
+                        <i class="fa-solid fa-file"></i>
+                        Drafts
+                    </button>
+                    <button class="folder" data-folder="TRASH">
+                        <i class="fa-solid fa-trash"></i>
+                        Trash
+                    </button>
+                    <button class="folder" data-folder="SPAM">
+                        <i class="fa-solid fa-ban"></i>
+                        Spam
+                    </button>
+>>>>>>> 769f276 (0.1.0-alpha)
                 </div>
             </div>
         </div>
@@ -65,6 +109,11 @@
                     </button>
                 </div>
             </div>
+<<<<<<< HEAD
+=======
+            <!-- Add this div for category tabs -->
+            <div class="category-tabs"></div>
+>>>>>>> 769f276 (0.1.0-alpha)
             <div class="email-list" id="emailList"></div>
         </div>
         <div class="main-content">
@@ -73,6 +122,7 @@
             </div>
             <div class="email-view fade-in" id="emailView" style="display: none;">
                 <div class="email-header">
+<<<<<<< HEAD
                     <h2 id="emailSubject"></h2>
                     <div class="email-meta">
                         <div class="email-address-line">
@@ -86,9 +136,71 @@
                         <div class="email-date-line">
                             <span class="meta-label">Date:</span>
                             <div id="emailDate"></div>
+=======
+                    <button class="back-button" id="backToList">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        Back to Inbox
+                    </button>
+                    <div class="header-main">
+                        <div class="header-top">
+                            <h2 id="emailSubject"></h2>
+                            <div class="header-actions">
+                                <span class="email-date" id="emailDate"></span>
+                            </div>
+                        </div>
+                        <div class="header-addresses">
+                            <div class="address-line">
+                                <span class="meta-label">From</span>
+                                <div class="email-address" id="emailFrom"></div>
+                            </div>
+                            <div class="address-line">
+                                <span class="meta-label">To</span>
+                                <div class="email-address" id="emailTo"></div>
+                            </div>
+                        </div>
+                        <div class="ai-features" id="aiFeatures">
+                            <span class="ai-features-title">
+                                <i class="fa-solid fa-sparkles"></i>
+                                Astro Tools
+                            </span>
+                            <div class="ai-buttons">
+                                <button class="ai-btn" id="summarizeBtn">
+                                    <i class="fa-solid fa-compress"></i>
+                                    Summarize
+                                </button>
+                                <button class="ai-btn" id="analyzeBtn">
+                                    <i class="fa-solid fa-magnifying-glass-chart"></i>
+                                    Analyze
+                                </button>
+                                <button class="ai-btn" id="extractBtn">
+                                    <i class="fa-solid fa-list-check"></i>
+                                    Actions
+                                </button>
+                                <button class="ai-btn" id="suggestBtn">
+                                    <i class="fa-solid fa-reply"></i>
+                                    Suggest
+                                </button>
+                            </div>
+                            <div id="aiResponse" class="ai-response">
+                                <!-- AI responses will appear here -->
+                            </div>
+                        </div>
+                        <div class="quick-actions">
+                            <button class="quick-action-btn" id="quickReply">
+                                <i class="fa-solid fa-reply"></i>
+                                Reply
+                            </button>
+                            <button class="quick-action-btn" id="quickReplyAll">
+                                <i class="fa-solid fa-reply-all"></i>
+                                Reply All
+                            </button>
+                            <button class="quick-action-btn" id="quickForward">
+                                <i class="fa-solid fa-share"></i>
+                                Forward
+                            </button>
+>>>>>>> 769f276 (0.1.0-alpha)
                         </div>
                     </div>
-                    <div class="email-attachments" id="emailAttachments"></div>
                 </div>
                 <div class="email-content-wrapper">
                     <div class="email-content" id="emailBody"></div>
@@ -98,8 +210,17 @@
                 <div class="composer-header">
                     <h2>New Message</h2>
                     <div class="composer-actions">
+<<<<<<< HEAD
                         <button class="minimize-btn">_</button>
                         <button class="close-btn">×</button>
+=======
+                        <button class="minimize-btn" title="Minimize">
+                            <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <button class="close-btn" title="Close">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+>>>>>>> 769f276 (0.1.0-alpha)
                     </div>
                 </div>
                 <div class="composer-body">
@@ -223,6 +344,18 @@
             </div>
         </div>
     </div>
+<<<<<<< HEAD
     <script src="app.js"></script>
+=======
+    <!-- AI Popup Container (initially hidden) -->
+    <div id="aiPopup" style="display:none;">
+        <div class="popup-content">
+            <!-- AI response will be injected here -->
+        </div>
+        <button id="closeAIPopup">Close</button>
+    </div>
+    <!-- Load the main app module -->
+    <script type="module" src="app.js"></script>
+>>>>>>> 769f276 (0.1.0-alpha)
 </body>
 </html>
