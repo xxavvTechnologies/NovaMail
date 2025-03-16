@@ -43,6 +43,8 @@ function setupEventListeners() {
             e.preventDefault();
             shortcuts[e.key]();
         }
+
+        handleKeyboardNavigation(e);
     });
 
     // Add folder navigation
@@ -139,6 +141,8 @@ function setupEventListeners() {
             });
         }
     });
+
+    initializeSearch();
 }
 
 // UI rendering methods
@@ -149,132 +153,166 @@ function renderEmails() {
     this.emails.forEach(email => {
         const div = document.createElement('div');
         div.className = `email-item ${email.read ? '' : 'unread'}`;
+        div.dataset.emailId = email.id;
+        div.setAttribute('role', 'listitem');
+        div.setAttribute('tabindex', '0');
         
-        // Extract display name and email
-        const fromMatch = email.from.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
-        const displayName = fromMatch ? (fromMatch[1] || fromMatch[2]) : email.from;
-        
-        // Format the date
-        const date = this.formatEmailDate(email.date);
-        
-        // Create snippet from plain text (first 140 chars)
-        const snippet = email.plainText ? 
-            email.plainText.substring(0, 140) + (email.plainText.length > 140 ? '...' : '') :
-            '';
-        
+        // Add checkbox for selection
         div.innerHTML = `
-            <div class="email-sender">${displayName}</div>
-            <div class="email-content-preview">
-                <div class="email-subject">${email.subject}</div>
-                <div class="email-snippet">${snippet}</div>
+            <div class="email-checkbox">
+                <input type="checkbox" class="select-email" aria-label="Select email">
             </div>
-            <div class="email-date">${date}</div>
+            <div class="email-content-preview">
+                <div class="email-sender">${this.sanitizeHTML(email.from)}</div>
+                <div class="email-subject">${this.sanitizeHTML(email.subject)}</div>
+                <div class="email-snippet">${this.sanitizeHTML(email.snippet)}</div>
+            </div>
+            <div class="email-date">${this.formatEmailDate(email.date)}</div>
             ${email.hasAttachment ? '<div class="email-attachment"><i class="fa-solid fa-paperclip"></i></div>' : ''}
         `;
-        
-        div.addEventListener('click', () => this.showEmail(email));
-        emailList.appendChild(div);
 
-        // Add spam warning if detected
-        if (email.isSpam) {
-            div.classList.add('spam-warning');
-            div.setAttribute('title', 'This message may be spam');
+        // Add selection handling
+        const checkbox = div.querySelector('.select-email');
+        checkbox.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent email opening
+            div.classList.toggle('selected');
+            this.updateBulkActionButtons();
+        });
+
+        // Handle shift+click for range selection
+        div.addEventListener('click', (e) => {
+            if (e.target.closest('.select-email')) return;
+            
+            if (e.shiftKey && this.lastSelectedEmail) {
+                const items = Array.from(emailList.children);
+                const start = items.indexOf(this.lastSelectedEmail);
+                const end = items.indexOf(div);
+                const range = items.slice(
+                    Math.min(start, end),
+                    Math.max(start, end) + 1
+                );
+                range.forEach(item => {
+                    item.classList.add('selected');
+                    item.querySelector('.select-email').checked = true;
+                });
+            } else {
+                if (!e.ctrlKey && !e.metaKey) {
+                    this.showEmail(email);
+                }
+            }
+            this.lastSelectedEmail = div;
+            this.updateBulkActionButtons();
+        });
+
+        emailList.appendChild(div);
+    });
+
+    this.updateBulkActionButtons();
+}
+
+function updateBulkActionButtons() {
+    const selected = document.querySelectorAll('.email-item.selected').length;
+    const buttons = [
+        'markReadBtn', 'markUnreadBtn', 'starBtn', 
+        'archiveBtn', 'deleteBtn'
+    ];
+    
+    buttons.forEach(btnId => {
+        const btn = document.getElementById(btnId);
+        if (btn) {
+            btn.disabled = selected === 0;
+            btn.classList.toggle('disabled', selected === 0);
         }
     });
 }
 
 function showEmail(email) {
-    // Update selected email
-    this.selectedEmail = email;
-    
-    // Show email view with slide animation
-    const listContainer = document.querySelector('.email-list-container');
+    if (!email) return;
+
+    // Update selected state
+    document.querySelectorAll('.email-item').forEach(item => {
+        item.classList.remove('selected');
+        if (item.dataset.emailId === email.id) {
+            item.classList.add('selected');
+        }
+    });
+
     const emailView = document.getElementById('emailView');
-    
+    const noSelection = document.getElementById('noSelection');
+    const emailComposer = document.getElementById('emailComposer');
+
+    // Simply show/hide without transitions
     emailView.style.display = 'flex';
-    setTimeout(() => {
-        listContainer.style.transform = 'translateX(-100%)';
-        emailView.classList.add('visible');
-    }, 10);
+    noSelection.style.display = 'none';
+    emailComposer.style.display = 'none';
 
-    // Setup back button
-    document.getElementById('backToList').onclick = () => {
-        listContainer.style.transform = 'translateX(0)';
-        emailView.classList.remove('visible');
-        setTimeout(() => emailView.style.display = 'none', 300);
-    };
-
-    // Setup quick action buttons
-    document.getElementById('quickReply').onclick = () => this.replyToEmail();
-    document.getElementById('quickReplyAll').onclick = () => this.replyAllToEmail();
-    document.getElementById('quickForward').onclick = () => this.forwardEmail();
-
-    // Update email content
-    // Mark as selected for context menu
-    this.selectedEmail = email;
-    
-    document.getElementById('emailView').style.display = 'block';
-    document.getElementById('emailComposer').style.display = 'none';
-    document.getElementById('noSelection').style.display = 'none';
-
-    // Update header without AI tools
+    // Update header
     const header = document.getElementById('emailHeader');
     header.innerHTML = `
-        <h2 id="emailSubject">${email.subject || '(No Subject)'}</h2>
-        <div class="email-meta">
-            <div class="email-address-line">
-                <span class="meta-label">From:</span>
-                <div class="email-address" id="emailFrom">${email.from}</div>
-            </div>
-            <div class="email-address-line">
-                <span class="meta-label">To:</span>
-                <div class="email-address" id="emailTo">${email.to.join(', ')}</div>
-            </div>
-            <div class="email-address-line">
-                <span class="meta-label">Date:</span>
-                <div id="emailDate">${this.formatFullDate(email.date)}</div>
+        <button class="back-button" id="backToList">
+            <i class="fa-solid fa-arrow-left"></i>
+            Back to Inbox
+        </button>
+        <div class="header-main">
+            <h2 id="emailSubject">${this.sanitizeHTML(email.subject || '(No Subject)')}</h2>
+            <div class="email-meta">
+                <div class="email-address-line">
+                    <span class="meta-label">From:</span>
+                    <div class="email-address">${this.sanitizeHTML(email.from)}</div>
+                </div>
+                <div class="email-address-line">
+                    <span class="meta-label">To:</span>
+                    <div class="email-address">${this.sanitizeHTML(email.to.join(', '))}</div>
+                </div>
+                <div class="email-address-line">
+                    <span class="meta-label">Date:</span>
+                    <div>${this.formatFullDate(email.date)}</div>
+                </div>
             </div>
         </div>
     `;
-    
-    // Setup email content (unchanged)
-    const emailContainer = document.getElementById('emailBody');
-    emailContainer.innerHTML = '';
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('sandbox', 'allow-popups allow-scripts');
-    iframe.style.width = '100%';
-    iframe.style.border = 'none';
-    iframe.style.height = '500px';
-    emailContainer.appendChild(iframe);
-    iframe.srcdoc = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <base target="_blank">
-            <style>
-                body { margin: 0; font-family: sans-serif; overflow-y: auto; }
-                img { max-width: 100%; height: auto; }
-                a { color: #1a73e8; }
-            </style>
-        </head>
-        <body>${email.content}</body>
-        </html>
-    `;
 
-    // Dispatch event for AI features
-    document.dispatchEvent(new CustomEvent('emailShown', { detail: email }));
+    // Setup back button
+    document.getElementById('backToList').addEventListener('click', () => {
+        emailView.style.display = 'none';
+        noSelection.style.display = 'flex';
+    });
+
+    // Setup quick action buttons
+    document.getElementById('quickReply').addEventListener('click', () => {
+        EmailOperations.replyToEmail.call(EmailOperations);
+    });
     
-    // Update email item in list
-    UIHandler.renderEmailItem.call(this, email);
+    document.getElementById('quickReplyAll').addEventListener('click', () => {
+        EmailOperations.replyAllToEmail.call(EmailOperations);
+    });
+    
+    document.getElementById('quickForward').addEventListener('click', () => {
+        EmailOperations.forwardEmail.call(EmailOperations);
+    });
+
+    // Update email content
+    this.renderEmailContent(email);
 }
 
 function showAIPopup(content) {
     const popup = document.getElementById('aiPopup');
     const popupContent = popup.querySelector('.popup-content');
-    popupContent.innerHTML = content;
+    
+    // Show loading state
+    if (content === 'loading') {
+        popupContent.innerHTML = `
+            <div class="ai-loading">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+                Processing your request...
+            </div>
+        `;
+    } else {
+        popupContent.innerHTML = content;
+    }
+    
     popup.style.display = 'block';
     
-    // Setup close handler
     document.getElementById('closeAIPopup').addEventListener('click', () => {
         popup.style.display = 'none';
     });
@@ -535,29 +573,32 @@ function initializeComposer() {
     function renderEmailsWithCategories() {
         const emailList = document.getElementById('emailList');
         if (!emailList) return;
-
+    
         emailList.innerHTML = '';
-
+    
         // Show/hide category tabs based on folder
         let categoryTabs = document.querySelector('.category-tabs');
         if (!categoryTabs) {
             categoryTabs = this.createCategoryTabs();
         }
-
-        if (this.currentFolder !== 'INBOX') {
+    
+        // Use either bound context or passed emailOps
+        const emailOps = this.emailOps || this;
+        
+        if (!emailOps.currentFolder || emailOps.currentFolder !== 'INBOX') {
             categoryTabs.style.display = 'none';
-            this.renderEmails();
+            emailOps.renderEmails();
             return;
         }
-
+    
         categoryTabs.style.display = 'flex';
-
+    
         // Get active category from UI or default to primary
         const activeCategory = document.querySelector('.category-tab.active')?.dataset.category || 'primary';
-        const emails = this.emailCategories[activeCategory] || [];
-
+        const emails = emailOps.emailCategories[activeCategory] || [];
+    
         // Update category counts
-        Object.entries(this.emailCategories).forEach(([category, categoryEmails]) => {
+        Object.entries(emailOps.emailCategories || {}).forEach(([category, categoryEmails]) => {
             const unreadCount = categoryEmails.filter(e => !e.read).length;
             const countElement = document.querySelector(`.category-tab[data-category="${category}"] .count`);
             if (countElement) {
@@ -565,38 +606,27 @@ function initializeComposer() {
                 countElement.style.display = unreadCount ? 'block' : 'none';
             }
         });
-
+    
         // Render emails for selected category
         emails.forEach(email => {
-            const div = document.createElement('div');
-            div.className = `email-item ${email.read ? '' : 'unread'}`;
-            div.dataset.emailId = email.id;
-
-            const fromMatch = email.from.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
-            const displayName = fromMatch ? (fromMatch[1] || fromMatch[2]) : email.from;
-            const date = this.formatEmailDate(email.date);
-            const snippet = email.plainText ?
-                email.plainText.substring(0, 140) + (email.plainText.length > 140 ? '...' : '') :
-                '';
-
-            div.innerHTML = `
-                <div class="email-sender">${displayName}</div>
-                <div class="email-content-preview">
-                    <div class="email-subject">${email.subject}</div>
-                    <div class="email-snippet">${snippet}</div>
-                </div>
-                <div class="email-date">${date}</div>
-                ${email.hasAttachment ? '<div class="email-attachment"><i class="fa-solid fa-paperclip"></i></div>' : ''}
-            `;
-
-            div.addEventListener('click', () => this.showEmail(email));
-            emailList.appendChild(div);
-
-            if (email.isSpam) {
-                div.classList.add('spam-warning');
-                div.setAttribute('title', 'This message may be spam');
+            const existingEmail = document.querySelector(`[data-email-id="${email.id}"]`);
+            if (existingEmail) {
+                // Update existing email item
+                updateEmailItem(existingEmail, email, emailOps);
+            } else {
+                // Create new email item
+                const div = createEmailItem(email, emailOps);
+                emailList.appendChild(div);
             }
         });
+    
+        // Update scroll sentinel position
+        let sentinel = document.querySelector('.scroll-sentinel');
+        if (!sentinel) {
+            sentinel = document.createElement('div');
+            sentinel.className = 'scroll-sentinel';
+            emailList.appendChild(sentinel);
+        }
     }
 
     function createCategoryTabs() {
@@ -653,6 +683,119 @@ function initializeComposer() {
         }
     }
 
+function setupEmailList() {
+    const emailList = document.getElementById('emailList');
+    let isInitialLoad = true;
+    
+    // Add infinite scroll with debounce
+    const observer = new IntersectionObserver(entries => {
+        const lastEntry = entries[entries.length - 1];
+        if (lastEntry.isIntersecting && !isInitialLoad) {
+            this.loadMoreEmails();
+        }
+    }, { 
+        threshold: 0.5,
+        rootMargin: '100px' // Load more before reaching the very bottom
+    });
+
+    // Add sentinel element for infinite scroll
+    let sentinel = document.querySelector('.scroll-sentinel');
+    if (!sentinel) {
+        sentinel = document.createElement('div');
+        sentinel.className = 'scroll-sentinel';
+        emailList.appendChild(sentinel);
+    }
+
+    // Start observing after initial load completes
+    setTimeout(() => {
+        observer.observe(sentinel);
+        isInitialLoad = false;
+    }, 1000);
+
+    // Set up real-time updates
+    this.startEmailPolling();
+}
+
+function createEmailItem(email, emailOps) {
+    const div = document.createElement('div');
+    div.className = `email-item ${email.read ? '' : 'unread'}`;
+    div.dataset.emailId = email.id;
+    updateEmailItem(div, email, emailOps);
+    return div;
+}
+
+function updateEmailItem(element, email, emailOps) {
+    const fromMatch = email.from.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
+    const displayName = fromMatch ? (fromMatch[1] || fromMatch[2]) : email.from;
+    const date = emailOps.formatEmailDate(email.date);
+    const snippet = email.plainText?.substring(0, 140) + (email.plainText?.length > 140 ? '...' : '') || '';
+
+    element.className = `email-item ${email.read ? '' : 'unread'}`;
+    element.innerHTML = `
+        <div class="email-sender">${displayName}</div>
+        <div class="email-content-preview">
+            <div class="email-subject">${email.subject}</div>
+            <div class="email-snippet">${snippet}</div>
+        </div>
+        <div class="email-date">${date}</div>
+        ${email.hasAttachment ? '<div class="email-attachment"><i class="fa-solid fa-paperclip"></i></div>' : ''}
+    `;
+
+    if (email.isSpam) {
+        element.classList.add('spam-warning');
+        element.setAttribute('title', 'This message may be spam');
+    }
+
+    // Ensure click handler is attached
+    element.onclick = () => emailOps.showEmail(email);
+}
+
+function initializeSearch() {
+    const searchInput = document.getElementById('searchInput');
+    const searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+    
+    // Create search suggestions container
+    const suggestionsDiv = document.createElement('div');
+    suggestionsDiv.className = 'search-suggestions';
+    searchInput.parentNode.appendChild(suggestionsDiv);
+
+    searchInput.addEventListener('input', debounce((e) => {
+        const query = e.target.value;
+        if (query.length >= 2) {
+            const matches = searchHistory.filter(h => 
+                h.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 5);
+            
+            showSearchSuggestions(matches, suggestionsDiv, searchInput);
+        } else {
+            suggestionsDiv.style.display = 'none';
+        }
+    }, 200));
+}
+
+function handleKeyboardNavigation(e) {
+    const emailList = document.getElementById('emailList');
+    const selected = emailList.querySelector('.email-item.selected');
+    
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        
+        const items = Array.from(emailList.querySelectorAll('.email-item'));
+        const currentIndex = items.indexOf(selected);
+        let nextIndex;
+        
+        if (e.key === 'ArrowDown') {
+            nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+        } else {
+            nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+        }
+        
+        items.forEach(item => item.classList.remove('selected'));
+        items[nextIndex].classList.add('selected');
+        items[nextIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
 // --- MARKER: END OF UI AND EVENT HANDLING SECTION ---
 
 export const UIHandler = {
@@ -666,4 +809,12 @@ export const UIHandler = {
     createCategoryTabs,
     renderEmailItem,   // now defined
     showAIPopup, // new function to display AI responses in popup
+    setupEmailList,
+    createEmailItem,
+    updateEmailItem,
+    initializeSearch, // Add this
+    handleKeyboardNavigation, // Add this
+    setEmailOps(emailOps) {
+        this.emailOps = emailOps;
+    }
 };

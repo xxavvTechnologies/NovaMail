@@ -28,6 +28,10 @@ async function handleEmailOperation(operation) {
 
 // --- MARKER: START OF EMAIL OPERATIONS SECTION ---
 // Email operations like loading, sending, and managing emails
+let isLoadingMore = false;
+let hasMoreEmails = true;
+let lastPageToken = null;
+
 async function loadEmails(folderId = 'INBOX') {
     if (!this.accessToken) {
         showNotification('Please sign in first', 'warning');
@@ -37,56 +41,37 @@ async function loadEmails(folderId = 'INBOX') {
     try {
         await this.checkNetworkConnectivity();
         showLoading(true);
-        
         const query = this.getFolderQuery(folderId);
+
+        // Clear existing emails and categories first
+        this.emails = [];
+        this.emailCategories = {};
+
         const response = await this.handleEmailOperation(async () => {
             return await gapi.client.gmail.users.messages.list({
                 userId: 'me',
-                maxResults: 50,
+                maxResults: 20, // Reduced from 50 to 20 for initial load
                 labelIds: [folderId],
                 q: query
             });
         });
-        
-        console.log('Gmail API response:', response); // Debug log
+
         if (!response?.result?.messages) {
             console.warn('No messages found');
+            this.renderEmails();
             return;
         }
 
-        // Fetch messages in smaller batches to avoid quota limits
-        const BATCH_SIZE = 10;
         const messageIds = response.result.messages;
-        this.emails = [];
-        this.emailCategories = {}; // Reset categories
+        const emails = await this.fetchEmailBatch(messageIds);
+        
+        // Set pagination state
+        hasMoreEmails = !!response.result.nextPageToken;
+        lastPageToken = response.result.nextPageToken;
+        isLoadingMore = false;
 
-        // Process batches sequentially
-        for (let i = 0; i < messageIds.length; i += BATCH_SIZE) {
-            const batchIds = messageIds.slice(i, i + BATCH_SIZE);
-            const batchPromises = batchIds.map(msg => 
-                this.handleEmailOperation(() => 
-                    gapi.client.gmail.users.messages.get({
-                        userId: 'me',
-                        id: msg.id,
-                        format: 'full'
-                    })
-                )
-            );
-            
-            const batchResults = await Promise.all(batchPromises);
-            const parsedEmails = batchResults
-                .map(result => this.parseEmailResponse(result.result))
-                .filter(Boolean);
-            
-            this.emails.push(...parsedEmails);
-        }
-
-        console.log('Loaded emails:', this.emails.length); // Debug log
-
-        // Sort emails by date (newest first)
-        this.emails.sort((a, b) => b.date - a.date);
-
-        // Categorize emails
+        // Add emails and categorize them
+        this.emails = emails;
         this.emails.forEach(email => {
             email.category = categorizeEmail(email);
             const category = email.category;
@@ -102,6 +87,53 @@ async function loadEmails(folderId = 'INBOX') {
         this.handleEmailError(err);
     } finally {
         showLoading(false);
+    }
+}
+
+async function loadMoreEmails() {
+    if (isLoadingMore || !hasMoreEmails) return;
+
+    try {
+        isLoadingMore = true;
+        const response = await gapi.client.gmail.users.messages.list({
+            userId: 'me',
+            maxResults: 20,
+            labelIds: [this.currentFolder],
+            pageToken: lastPageToken
+        });
+
+        if (!response.result.messages) {
+            hasMoreEmails = false;
+            isLoadingMore = false;
+            return;
+        }
+
+        const olderEmails = await this.fetchEmailBatch(response.result.messages);
+        
+        if (olderEmails.length > 0) {
+            // Update pagination state
+            lastPageToken = response.result.nextPageToken;
+            hasMoreEmails = !!lastPageToken;
+
+            // Add emails and categorize them
+            olderEmails.forEach(email => {
+                // Check for duplicates before adding
+                if (!this.emails.some(e => e.id === email.id)) {
+                    this.emails.push(email);
+                    email.category = categorizeEmail(email);
+                    if (!this.emailCategories[email.category]) {
+                        this.emailCategories[email.category] = [];
+                    }
+                    this.emailCategories[email.category].push(email);
+                }
+            });
+            
+            this.renderEmailsWithCategories();
+        }
+    } catch (error) {
+        console.error('Error loading more emails:', error);
+    } finally {
+        isLoadingMore = false;
     }
 }
 
@@ -167,42 +199,42 @@ async function getEmailDetails(messageId, full = false) {
 
 function renderEmails() {
     const emailList = document.getElementById('emailList');
-    emailList.innerHTML = '';
+    if (!emailList) return;
 
+    emailList.innerHTML = '';
+    
     this.emails.forEach(email => {
         const div = document.createElement('div');
-        div.className = `email-item ${email.read ? '' : 'unread'}`;
-        
-        // Extract display name and email
+        div.className = `email-item ${email.read ? '' : 'unread'} ${email.selected ? 'selected' : ''}`;
+        div.dataset.emailId = email.id;
+
+        // Extract display name from email
         const fromMatch = email.from.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
         const displayName = fromMatch ? (fromMatch[1] || fromMatch[2]) : email.from;
-        
-        // Format the date
-        const date = this.formatEmailDate(email.date);
-        
-        // Create snippet from plain text (first 140 chars)
-        const snippet = email.plainText ? 
-            email.plainText.substring(0, 140) + (email.plainText.length > 140 ? '...' : '') :
-            '';
-        
-        div.innerHTML = `
-            <div class="email-sender">${displayName}</div>
-            <div class="email-content-preview">
-                <div class="email-subject">${email.subject}</div>
-                <div class="email-snippet">${snippet}</div>
-            </div>
-            <div class="email-date">${date}</div>
-            ${email.hasAttachment ? '<div class="email-attachment"><i class="fa-solid fa-paperclip"></i></div>' : ''}
-        `;
-        
-        div.addEventListener('click', () => this.showEmail(email));
-        emailList.appendChild(div);
 
-        // Add spam warning if detected
-        if (email.isSpam) {
-            div.classList.add('spam-warning');
-            div.setAttribute('title', 'This message may be spam');
-        }
+        // Format snippet
+        const snippet = email.snippet || email.plainText?.substring(0, 140) || '';
+        const date = this.formatEmailDate(email.date);
+
+        div.innerHTML = `
+            <div class="email-content-preview">
+                <div class="email-sender">${this.sanitizeHTML(displayName)}</div>
+                <div class="email-subject">${this.sanitizeHTML(email.subject || '(No Subject)')}</div>
+                <div class="email-snippet">${this.sanitizeHTML(snippet)}${snippet.length > 140 ? '...' : ''}</div>
+            </div>
+            <div class="email-metadata">
+                <div class="email-date">${date}</div>
+                ${email.hasAttachment ? '<div class="email-attachment"><i class="fa-solid fa-paperclip"></i></div>' : ''}
+            </div>
+        `;
+
+        div.addEventListener('click', (e) => {
+            if (!e.ctrlKey && !e.metaKey) {
+                this.showEmail(email);
+            }
+        });
+
+        emailList.appendChild(div);
     });
 }
 
@@ -235,7 +267,7 @@ function showEmail(email) {
 
     const emailContainer = document.getElementById('emailBody');
     emailContainer.innerHTML = ''; // Clear existing content
-    
+
     const iframe = document.createElement('iframe');
     // Remove allow-same-origin to prevent sandbox escapes
     iframe.setAttribute('sandbox', 'allow-popups allow-scripts');
@@ -388,7 +420,7 @@ function processImage(imgNode) {
     if (originalWidth && originalHeight) {
         styleAttr += ` aspect-ratio: ${originalWidth}/${originalHeight};`;
     }
-    
+
     // Merge with existing style if present
     const existingStyle = imgNode.getAttribute('style');
     if (existingStyle) {
@@ -411,7 +443,7 @@ function sanitizeCSS(css) {
     try {
         // Remove comments and potentially harmful content
         css = css.replace(/\/\*.*?\*\//g, '');
-        
+
         // Split into individual rules
         const rules = css.split(';');
         
@@ -456,7 +488,7 @@ async function validateLink(url) {
             method: 'POST',
             body: JSON.stringify({
                 client: {
-                    clientId: "NovaMail",
+                    clientId: "Nova Mail",
                     clientVersion: "1.0.0"
                 },
                 threatInfo: {
@@ -464,7 +496,7 @@ async function validateLink(url) {
                     platformTypes: ["ANY_PLATFORM"],
                     threatEntryTypes: ["URL"],
                     threatEntries: [{ url }]
-                }
+                },
             })
         });
 
@@ -611,7 +643,6 @@ function calculateSpamScore(message) {
     // Check for suspicious content patterns
     const subject = headers.find(h => h.name === 'Subject')?.value || '';
     const from = headers.find(h => h.name === 'From')?.value || '';
-
     const suspiciousPatterns = [
         /\b(viagra|cialis|rolex|luxury.*watches)\b/i,
         /\b(lottery|prize|winner|million.*dollars)\b/i,
@@ -719,7 +750,7 @@ function displayAttachments(attachments) {
         div.addEventListener('click', () => this.downloadAttachment(attachment));
         container.appendChild(div);
     });
-    
+
     container.style.display = 'grid';
 }
 
@@ -739,14 +770,12 @@ async function downloadAttachment(attachment) {
         // Use Blob API with type-safe checks
         const byteCharacters = atob(response.result.data.replace(/-/g, '+').replace(/_/g, '/'));
         const byteNumbers = new Array(byteCharacters.length);
-        
         for (let i = 0; i < byteCharacters.length; i++) {
             byteNumbers[i] = byteCharacters.charCodeAt(i);
         }
-
         const byteArray = new Uint8Array(byteNumbers);
         const blob = new Blob([byteArray], { type: attachment.mimeType || 'application/octet-stream' });
-        
+
         // Use more reliable download method
         const downloadUrl = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -778,12 +807,10 @@ function base64ToArrayBuffer(base64) {
 function initializeComposer() {
     const editor = document.getElementById('emailEditor');
     const toolbar = document.querySelector('.composer-toolbar');
-    
     // Handle toolbar buttons
     toolbar.addEventListener('click', (e) => {
         const button = e.target.closest('.toolbar-btn');
         if (!button) return;
-        
         e.preventDefault();
         const command = button.dataset.command;
         
@@ -805,7 +832,7 @@ function initializeComposer() {
             button.classList.toggle('active');
         }
     });
-
+       
     // Handle file attachments
     const fileInput = document.querySelector('.attachment-btn input');
     fileInput.addEventListener('change', this.handleAttachments.bind(this));
@@ -869,6 +896,11 @@ function createEmailRequest(to, subject, body, attachments = [], isDraft = false
     const bcc = document.getElementById('bccField').value;
     const boundary = `boundary_${Math.random().toString(36).substr(2)}`;
     
+    // Helper function to encode UTF-8 text to base64
+    const encodeUTF8ToBase64 = (text) => {
+        return btoa(unescape(encodeURIComponent(text)));
+    };
+    
     // Create RFC 2822 email
     const email = [
         'MIME-Version: 1.0',
@@ -882,13 +914,13 @@ function createEmailRequest(to, subject, body, attachments = [], isDraft = false
         'Content-Type: text/plain; charset=UTF-8',
         'Content-Transfer-Encoding: base64',
         '',
-        Buffer.from(this.htmlToPlainText(body)).toString('base64'),
+        encodeUTF8ToBase64(this.htmlToPlainText(body)),
         '',
         `--${boundary}`,
         'Content-Type: text/html; charset=UTF-8',
         'Content-Transfer-Encoding: base64',
         '',
-        Buffer.from(this.sanitizeHTML(body)).toString('base64'),
+        encodeUTF8ToBase64(this.sanitizeHTML(body)),
         '',
         `--${boundary}--`
     ].filter(Boolean);
@@ -901,12 +933,13 @@ function createEmailRequest(to, subject, body, attachments = [], isDraft = false
 }
 
 async function saveDraft() {
-    const to = document.getElementById('toField').value;
-    const subject = document.getElementById('subjectField').value;
-    const body = document.getElementById('emailEditor').innerHTML;
-
     try {
+        const to = document.getElementById('toField').value;
+        const subject = document.getElementById('subjectField').value;
+        const body = document.getElementById('emailEditor').innerHTML;
+
         const email = this.createEmailRequest(to, subject, body, [], true);
+        
         await this.handleEmailOperation(async () => {
             return await gapi.client.gmail.users.drafts.create({
                 userId: 'me',
@@ -942,17 +975,17 @@ function resetComposer() {
 function decodeBase64(encoded) {
     try {
         if (!encoded) return '';
-        
+
         // Add padding if needed
         while (encoded.length % 4) {
             encoded += '=';
         }
-        
+
         // Replace URL-safe chars with base64 chars
         const base64 = encoded
             .replace(/-/g, '+')
             .replace(/_/g, '/');
-        
+
         // Decode and handle UTF-8
         try {
             return decodeURIComponent(escape(atob(base64)));
@@ -1037,10 +1070,14 @@ async function searchEmails(query) {
     }
 
     try {
-        const response = await gapi.client.gmail.users.messages.list({
-            userId: 'me',
-            q: query,
-            maxResults: 50
+        showLoading(true);
+        // Add retry logic here
+        const response = await this.handleEmailOperation(async () => {
+            return await gapi.client.gmail.users.messages.list({
+                userId: 'me',
+                q: query,
+                maxResults: 20 // Reduced from 50 to prevent rate limiting
+            });
         });
 
         if (!response.result.messages) {
@@ -1054,7 +1091,9 @@ async function searchEmails(query) {
         this.renderEmails();
     } catch (error) {
         console.error('Search failed:', error);
-        showNotification('Search failed', 'error');
+        showNotification('Search failed. Please try again.', 'error');
+    } finally {
+        showLoading(false);
     }
 }
 
@@ -1092,11 +1131,23 @@ async function toggleStarred() {
 }
 
 function navigateEmails(direction) {
-    const currentIndex = this.emails.findIndex(e => e.id === this.selectedEmail?.id);
+    const emailList = document.getElementById('emailList');
+    const items = Array.from(emailList.querySelectorAll('.email-item'));
+    const currentIndex = items.findIndex(item => item.classList.contains('selected'));
     let newIndex = direction === 'next' ? currentIndex + 1 : currentIndex - 1;
     
-    if (newIndex >= 0 && newIndex < this.emails.length) {
-        this.showEmail(this.emails[newIndex]);
+    if (newIndex >= 0 && newIndex < items.length) {
+        items[currentIndex]?.classList.remove('selected');
+        items[newIndex].classList.add('selected');
+        items[newIndex].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Update email preview
+        const emailId = items[newIndex].dataset.emailId;
+        const email = this.emails.find(e => e.id === emailId);
+        if (email) {
+            this.selectedEmail = email;
+            this.showEmail(email);
+        }
     }
 }
 
@@ -1339,6 +1390,158 @@ function markAsSpam() {
     if (!this.selectedEmail) return;
     this.moveToSpam(this.selectedEmail.id);
 }
+
+let isPolling = false;
+let pollingInterval = null;
+
+async function startEmailPolling() {
+    if (isPolling) return;
+    isPolling = true;
+    
+    try {
+        // Initial check with error handling
+        await this.checkNewEmails(); // Add this. to bind context
+        
+        // Poll every 30 seconds with error handling
+        pollingInterval = setInterval(async () => {
+            try {
+                await this.checkNewEmails(); // Add this. to bind context
+            } catch (error) {
+                console.error('Email polling error:', error);
+                if (error.message?.includes('auth')) {
+                    clearInterval(pollingInterval);
+                    isPolling = false;
+                }
+            }
+        }, 30000);
+    } catch (error) {
+        console.error('Failed to start email polling:', error);
+        isPolling = false;
+    }
+}
+
+async function checkNewEmails() {
+    // Get token from app instance
+    const app = window.app;
+    if (!app?.isAuthenticated || !app?.accessToken) {
+        throw new Error('auth_required');
+    }
+
+    try {
+        // Initialize emails array if needed
+        if (!this.emails) {
+            this.emails = [];
+        }
+
+        // Initialize emailCategories if needed
+        if (!this.emailCategories) {
+            this.emailCategories = {};
+        }
+
+        const latestEmailDate = this.emails[0]?.date || new Date(0);
+        const query = `after:${Math.floor(latestEmailDate.getTime() / 1000)}`;
+        
+        const response = await gapi.client.gmail.users.messages.list({
+            userId: 'me',
+            maxResults: 20,
+            q: query
+        });
+
+        if (!response?.result?.messages) return;
+
+        const newEmails = await this.fetchEmailBatch(response.result.messages);
+        
+        if (newEmails.length > 0) {
+            // Add new emails to the beginning of the list
+            this.emails.unshift(...newEmails);
+            
+            // Categorize new emails
+            newEmails.forEach(email => {
+                email.category = categorizeEmail(email);
+                if (!this.emailCategories[email.category]) {
+                    this.emailCategories[email.category] = [];
+                }
+                this.emailCategories[email.category].unshift(email);
+            });
+
+            // Update UI if renderEmailsWithCategories exists
+            if (typeof this.renderEmailsWithCategories === 'function') {
+                this.renderEmailsWithCategories();
+            } else {
+                this.renderEmails();
+            }
+            showNotification(`${newEmails.length} new email(s) received`, 'info');
+        }
+    } catch (error) {
+        console.error('Error checking new emails:', error);
+        if (error.status === 401) {
+            throw new Error('auth_required');
+        }
+        throw error;
+    }
+}
+
+let autoSaveTimer = null;
+let lastDraftContent = '';
+
+function setupAutoSave() {
+    const editor = document.getElementById('emailEditor');
+    const subject = document.getElementById('subjectField');
+    const to = document.getElementById('toField');
+
+    const autoSaveHandler = async () => {
+        const content = editor.innerHTML;
+        const subjectText = subject.value;
+        const toText = to.value;
+
+        // Only save if there are actual changes and some content
+        if ((content !== lastDraftContent || subjectText || toText) && 
+            (content.length > 0 || subjectText.length > 0 || toText.length > 0)) {
+            lastDraftContent = content;
+            await saveDraft();
+        }
+    };
+
+    // Auto-save every 30 seconds if there are changes
+    autoSaveTimer = setInterval(autoSaveHandler, 30000);
+
+    // Clear timer when email is sent or discarded
+    return () => clearInterval(autoSaveTimer);
+}
+
+async function updateFolderCounts() {
+    const folders = ['INBOX', 'DRAFT', 'SENT', 'SPAM', 'TRASH'];
+    
+    for (const folder of folders) {
+        try {
+            const response = await gapi.client.gmail.users.messages.list({
+                userId: 'me',
+                q: `in:${folder} is:unread`,
+                maxResults: 1
+            });
+            
+            const count = response.result.resultSizeEstimate || 0;
+            const folderEl = document.querySelector(`[data-folder="${folder}"]`);
+            
+            if (folderEl) {
+                // Find existing count element or create a new one
+                let countEl = folderEl.querySelector('.unread-count');
+                if (!countEl) {
+                    countEl = document.createElement('span');
+                    countEl.className = 'unread-count';
+                    folderEl.appendChild(countEl);
+                }
+
+                // Update count display
+                countEl.textContent = count || '';
+                countEl.style.display = count ? 'flex' : 'none';
+            }
+        } catch (error) {
+            console.error(`Error fetching count for ${folder}:`, error);
+        }
+    }
+}
+
 // --- MARKER: END OF EMAIL OPERATIONS SECTION ---
 
 export const EmailOperations = {
@@ -1406,5 +1609,10 @@ export const EmailOperations = {
     toggleShortcutHelp,
     archiveEmail,
     deleteEmail,
-    markAsSpam
+    markAsSpam,
+    startEmailPolling,
+    checkNewEmails,
+    loadMoreEmails,
+    setupAutoSave,
+    updateFolderCounts
 };

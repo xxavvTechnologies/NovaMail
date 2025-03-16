@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Nova Mail</title>
+    <meta name="description" content="A modern email client. Experience a new way to manage your emails with Nova Mail.">
+    <meta name="keywords" content="email, client, modern, Nova Mail">
+    <meta name="author" content="xxavvTechnologies">
+    <meta name="theme-color" content="#ffffff">
+    <link rel="icon" href="https://static.wixstatic.com/media/5f23d5_4387cca31dd1410c8680c07f39ab8089~mv2.png" type="image/png">
     <link rel="stylesheet" href="styles.css">
     <script>
         window.onerror = function(msg, url, line, col, error) {
@@ -34,8 +39,8 @@
     <!-- Add this before the app div -->
     <div id="loginOverlay" class="login-overlay">
         <div class="login-modal">
-            <img src="https://static.wixstatic.com/media/5f23d5_4387cca31dd1410c8680c07f39ab8089~mv2.png" alt="NovaMail" class="login-logo">
-            <h1>Welcome to NovaMail</h1>
+            <img src="https://static.wixstatic.com/media/5f23d5_4387cca31dd1410c8680c07f39ab8089~mv2.png" alt="Nova Mail" class="login-logo">
+            <h1>Welcome to Nova Mail</h1>
             <p>Your modern email experience begins here</p>
             <button class="google-signin-btn" id="loginBtn">
                 <i class="fa-brands fa-google"></i>
@@ -48,7 +53,10 @@
         <div class="sidebar">
             <!-- Remove the auth-section div and just keep emailControls -->
             <div id="emailControls" style="display: none;">
-                <button class="new-email-button" id="newEmailBtn">New Email</button>
+                <button class="new-email-button" id="newEmailBtn">
+                    <i class="fa-solid fa-pen"></i>
+                    New Email
+                </button>
                 <div class="folder-list">
                     <button class="folder active" data-folder="INBOX">
                         <i class="fa-solid fa-inbox"></i>
