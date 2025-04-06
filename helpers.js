@@ -18,72 +18,50 @@ function formatEmailDate(date) {
     }
 }
 
+async function checkLinkSafety(url) {
+    try {
+        const response = await fetch('/.netlify/functions/check-link', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        
+        if (!response.ok) {
+            throw new Error('Link check failed');
+        }
+        
+        const data = await response.json();
+        return data.safe;
+    } catch (error) {
+        console.error('Link safety check failed:', error);
+        return false;
+    }
+}
+
 function sanitizeHTML(html) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    
-    // Preserve styles for email content
-    const originalStyles = doc.getElementsByTagName('style');
-    let styleContent = '';
-    Array.from(originalStyles).forEach(style => {
-        styleContent += style.textContent;
-        style.remove();
-    });
 
-    // Remove dangerous elements
-    const dangerousTags = ['script', 'iframe', 'object', 'embed', 'form'];
-    dangerousTags.forEach(tag => {
-        doc.querySelectorAll(tag).forEach(node => node.remove());
-    });
-
-    // Process elements
-    doc.querySelectorAll('*').forEach(node => {
-        // Keep original styles but sanitize them
-        const originalStyle = node.getAttribute('style');
-        if (originalStyle) {
-            const safeStyle = this.sanitizeCSS(originalStyle);
-            if (safeStyle) {
-                node.setAttribute('style', safeStyle);
-            }
-        }
-
-        // Handle images
-        if (node.tagName === 'IMG') {
-            this.processImage(node);
-            return;
-        }
-
-        // Clean other attributes
-        const allowedAttrs = ['href', 'src', 'alt', 'title', 'class', 'target', 'style'];
-        Array.from(node.attributes).forEach(attr => {
-            if (!allowedAttrs.includes(attr.name)) {
-                node.removeAttribute(attr.name);
-            }
-            if (attr.name === 'href') {
-                node.setAttribute('target', '_blank');
-                node.setAttribute('rel', 'noopener noreferrer');
-            }
-        });
-    });
-
-    // Reinsert sanitized styles in a scoped manner
-    if (styleContent) {
-        const safeStyles = this.sanitizeCSS(styleContent);
-        const styleElement = doc.createElement('style');
-        styleElement.textContent = safeStyles;
-        doc.body.insertBefore(styleElement, doc.body.firstChild);
-    }
-
-    // Add click protection for all links
+    // Process links with safety checks
     doc.querySelectorAll('a').forEach(link => {
         const url = link.getAttribute('href');
         if (url) {
+            // Add basic security attributes
+            link.setAttribute('target', '_blank');
+            link.setAttribute('rel', 'noopener noreferrer');
+            
+            // Add click handler for safety check
             link.addEventListener('click', async (e) => {
                 e.preventDefault();
-                if (await this.validateLink(url)) {
+                link.classList.add('checking');
+                
+                const isSafe = await checkLinkSafety(url);
+                link.classList.remove('checking');
+                
+                if (isSafe) {
                     window.open(url, '_blank', 'noopener,noreferrer');
                 } else {
-                    this.showNotification('This link appears to be unsafe', 'warning');
+                    showNotification('This link appears to be unsafe', 'warning');
                 }
             });
         }

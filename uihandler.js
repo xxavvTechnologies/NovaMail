@@ -143,6 +143,64 @@ function setupEventListeners() {
     });
 
     initializeSearch();
+
+    // Add mobile menu toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.querySelector('.sidebar');
+    
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sidebar.classList.toggle('active');
+        });
+
+        // Close sidebar when clicking outside
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 768 && 
+                !sidebar.contains(e.target) && 
+                !menuToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+            }
+        });
+    }
+
+    // Add swipe handling for mobile
+    let touchStartX = 0;
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+    });
+
+    document.addEventListener('touchmove', (e) => {
+        if (!touchStartX) return;
+        
+        const touchEndX = e.touches[0].clientX;
+        const diff = touchEndX - touchStartX;
+        
+        // Swipe right to open sidebar
+        if (diff > 50 && touchStartX < 30) {
+            sidebar.classList.add('active');
+        }
+        // Swipe left to close sidebar
+        else if (diff < -50 && sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    document.addEventListener('touchend', () => {
+        touchStartX = 0;
+    });
+
+    // Handle window resize
+    window.addEventListener('resize', () => {
+        const isMobile = window.innerWidth <= 768;
+        menuToggle.style.display = isMobile ? 'flex' : 'none';
+        if (!isMobile) {
+            sidebar.classList.remove('active');
+        }
+    });
+
+    // Trigger initial resize check
+    window.dispatchEvent(new Event('resize'));
 }
 
 // UI rendering methods
@@ -229,70 +287,132 @@ function updateBulkActionButtons() {
 function showEmail(email) {
     if (!email) return;
 
-    // Update selected state
-    document.querySelectorAll('.email-item').forEach(item => {
-        item.classList.remove('selected');
-        if (item.dataset.emailId === email.id) {
-            item.classList.add('selected');
-        }
-    });
-
     const emailView = document.getElementById('emailView');
-    const noSelection = document.getElementById('noSelection');
-    const emailComposer = document.getElementById('emailComposer');
-
-    // Simply show/hide without transitions
+    emailView.style.opacity = '0';
     emailView.style.display = 'flex';
-    noSelection.style.display = 'none';
-    emailComposer.style.display = 'none';
+    
+    emailView.offsetHeight; // Trigger reflow
+    emailView.style.opacity = '1';
+    emailView.style.transition = 'opacity var(--transition-normal)';
 
-    // Update header
+    // Update header with complete layout
     const header = document.getElementById('emailHeader');
     header.innerHTML = `
-        <button class="back-button" id="backToList">
-            <i class="fa-solid fa-arrow-left"></i>
-            Back to Inbox
-        </button>
-        <div class="header-main">
-            <h2 id="emailSubject">${this.sanitizeHTML(email.subject || '(No Subject)')}</h2>
-            <div class="email-meta">
-                <div class="email-address-line">
-                    <span class="meta-label">From:</span>
-                    <div class="email-address">${this.sanitizeHTML(email.from)}</div>
+        <div class="email-header-inner">
+            <button class="back-button" id="backToList">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <div class="header-content">
+                <div class="subject-line">
+                    <h2>${this.sanitizeHTML(email.subject || '(No Subject)')}</h2>
+                    <span class="email-date">${this.formatFullDate(email.date)}</span>
                 </div>
-                <div class="email-address-line">
-                    <span class="meta-label">To:</span>
-                    <div class="email-address">${this.sanitizeHTML(email.to.join(', '))}</div>
+                <div class="header-metadata">
+                    <div class="address-row"><strong>From:</strong> ${this.sanitizeHTML(email.from)}</div>
+                    <div class="address-row"><strong>To:</strong> ${this.sanitizeHTML(email.to.join(', '))}</div>
+                    ${email.hasAttachment ? '<div class="attachments-label"><i class="fa-solid fa-paperclip"></i> Contains attachments</div>' : ''}
                 </div>
-                <div class="email-address-line">
-                    <span class="meta-label">Date:</span>
-                    <div>${this.formatFullDate(email.date)}</div>
-                </div>
+            </div>
+            <div class="email-actions">
+                <button class="action-btn reply-btn" title="Reply">
+                    <i class="fa-solid fa-reply"></i>
+                </button>
+                <button class="action-btn forward-btn" title="Forward">
+                    <i class="fa-solid fa-share"></i>
+                </button>
+                <button class="action-btn more-btn" title="More actions">
+                    <i class="fa-solid fa-ellipsis-v"></i>
+                </button>
             </div>
         </div>
     `;
 
-    // Setup back button
-    document.getElementById('backToList').addEventListener('click', () => {
-        emailView.style.display = 'none';
-        noSelection.style.display = 'flex';
+    // Add back button handler
+    const backBtn = document.getElementById('backToList');
+    if (backBtn) {
+        backBtn.onclick = () => this.showEmailList();
+    }
+
+    // Hide other views
+    document.getElementById('noSelection').style.display = 'none';
+    document.getElementById('emailComposer').style.display = 'none';
+
+    // Update email content in iframe
+    const emailContainer = document.getElementById('emailBody');
+    emailContainer.innerHTML = '';
+    
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-scripts allow-popups');
+    iframe.style.width = '100%';
+    iframe.style.border = 'none';
+    iframe.style.height = '500px';
+    emailContainer.appendChild(iframe);
+
+    iframe.srcdoc = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <base target="_blank">
+            <style>
+                body {
+                    margin: 0;
+                    padding: 16px;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    overflow-y: auto;
+                }
+                img { max-width: 100%; height: auto; }
+                a { color: #1a73e8; }
+            </style>
+        </head>
+        <body>${email.content}</body>
+        </html>
+    `;
+
+    // Display attachments if any
+    if (email.attachments && email.attachments.length > 0) {
+        this.displayAttachments(email.attachments);
+    }
+}
+
+function sanitizeHTML(html) {
+    console.log('Starting HTML sanitization');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    doc.querySelectorAll('a').forEach(link => {
+        const url = link.getAttribute('href');
+        console.log('Processing link:', url);
+        
+        link.addEventListener('click', async (e) => {
+            e.preventDefault();
+            console.log('Link clicked:', url);
+            
+            link.classList.add('checking');
+            console.log('Starting link safety check');
+            
+            const isSafe = await checkLinkSafety(url);
+            console.log('Link safety check result:', isSafe);
+            
+            link.classList.remove('checking');
+            
+            if (isSafe) {
+                console.log('Opening safe link');
+                window.open(url, '_blank', 'noopener,noreferrer');
+            } else {
+                console.log('Blocked unsafe link');
+                showNotification('This link appears to be unsafe', 'warning');
+            }
+        });
     });
 
-    // Setup quick action buttons
-    document.getElementById('quickReply').addEventListener('click', () => {
-        EmailOperations.replyToEmail.call(EmailOperations);
-    });
-    
-    document.getElementById('quickReplyAll').addEventListener('click', () => {
-        EmailOperations.replyAllToEmail.call(EmailOperations);
-    });
-    
-    document.getElementById('quickForward').addEventListener('click', () => {
-        EmailOperations.forwardEmail.call(EmailOperations);
-    });
+    return doc.body.innerHTML;
+}
 
-    // Update email content
-    this.renderEmailContent(email);
+function showEmailList() {
+    document.getElementById('emailView').style.display = 'none';
+    document.getElementById('emailList').style.display = 'block';
+    document.getElementById('noSelection').style.display = 'none';
+    document.getElementById('emailComposer').style.display = 'none';
 }
 
 function showAIPopup(content) {
@@ -720,6 +840,45 @@ function createEmailItem(email, emailOps) {
     const div = document.createElement('div');
     div.className = `email-item ${email.read ? '' : 'unread'}`;
     div.dataset.emailId = email.id;
+
+    // Add double-click handler
+    div.addEventListener('dblclick', (e) => {
+        e.stopPropagation();
+        emailOps.toggleReadStatus(email.id);
+    });
+
+    // Add touch handlers for swipe
+    let touchStart = null;
+    let touchEnd = null;
+
+    div.addEventListener('touchstart', (e) => {
+        touchStart = e.touches[0].clientX;
+    });
+
+    div.addEventListener('touchmove', (e) => {
+        touchEnd = e.touches[0].clientX;
+        const diff = touchStart - touchEnd;
+        
+        // Show action hints based on swipe direction
+        if (Math.abs(diff) > 50) {
+            div.style.transform = `translateX(${-diff}px)`;
+        }
+    });
+
+    div.addEventListener('touchend', () => {
+        const diff = touchStart - touchEnd;
+        if (Math.abs(diff) > 100) { // Minimum swipe distance
+            if (diff > 0) {
+                // Swipe left - Archive
+                emailOps.archiveSelected([email.id]);
+            } else {
+                // Swipe right - Mark read/unread
+                emailOps.toggleReadStatus(email.id);
+            }
+        }
+        div.style.transform = '';
+    });
+
     updateEmailItem(div, email, emailOps);
     return div;
 }
@@ -773,6 +932,29 @@ function initializeSearch() {
     }, 200));
 }
 
+function showSearchSuggestions(suggestions, container, searchInput) {
+    container.innerHTML = '';
+    
+    if (!suggestions.length) {
+        container.style.display = 'none';
+        return;
+    }
+
+    suggestions.forEach(suggestion => {
+        const div = document.createElement('div');
+        div.className = 'search-suggestion';
+        div.textContent = suggestion;
+        div.addEventListener('click', () => {
+            searchInput.value = suggestion;
+            container.style.display = 'none';
+            this.searchEmails(suggestion);
+        });
+        container.appendChild(div);
+    });
+
+    container.style.display = 'block';
+}
+
 function handleKeyboardNavigation(e) {
     const emailList = document.getElementById('emailList');
     const selected = emailList.querySelector('.email-item.selected');
@@ -802,6 +984,7 @@ export const UIHandler = {
     setupEventListeners,
     renderEmails,
     showEmail,
+    showEmailList,
     setupContextMenus,
     showContextMenu, // Add this
     initializeComposer,
@@ -813,8 +996,28 @@ export const UIHandler = {
     createEmailItem,
     updateEmailItem,
     initializeSearch, // Add this
+    showSearchSuggestions, // Add this
     handleKeyboardNavigation, // Add this
     setEmailOps(emailOps) {
         this.emailOps = emailOps;
     }
 };
+
+// Create and export singleton instance
+const uiHandler = {
+    ...UIHandler,
+    emailOps: null,
+    setEmailOps(emailOps) {
+        this.emailOps = emailOps;
+        // Mirror needed methods
+        this.formatEmailDate = emailOps.formatEmailDate;
+        this.formatFullDate = emailOps.formatFullDate;
+        this.sanitizeHTML = emailOps.sanitizeHTML;
+        this.displayAttachments = emailOps.displayAttachments;
+    }
+};
+
+// Make it globally available
+window.uiHandler = uiHandler;
+
+export default uiHandler;

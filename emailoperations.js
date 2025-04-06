@@ -1,5 +1,6 @@
 import { showNotification, showLoading } from './shared/utils.js';
 import { categories, categorizeEmail, calculateCategoryScore } from './categories.js';
+import uiHandler from './uihandler.js';
 
 // Add handleEmailOperation near the top with other core email functions
 async function handleEmailOperation(operation) {
@@ -234,6 +235,10 @@ function renderEmails() {
             }
         });
 
+        div.addEventListener('dblclick', () => {
+            this.toggleReadStatus(email.id);
+        });
+
         emailList.appendChild(div);
     });
 }
@@ -255,47 +260,36 @@ function formatEmailDate(date) {
 }
 
 function showEmail(email) {
-    document.getElementById('emailView').style.display = 'block';
-    document.getElementById('emailComposer').style.display = 'none';
-    document.getElementById('noSelection').style.display = 'none';
+    if (!email) return;
 
-    // Populate email header information
-    document.getElementById('emailSubject').textContent = email.subject || '(No Subject)';
-    document.getElementById('emailFrom').textContent = email.from;
-    document.getElementById('emailTo').textContent = email.to.join(', ');
-    document.getElementById('emailDate').textContent = this.formatFullDate(email.date);
+    // Auto-mark as read when opened
+    if (!email.read) {
+        this.modifyEmail(email.id, {
+            removeLabelIds: ['UNREAD']
+        });
+        email.read = true;
+        this.renderEmailItem(email);
+    }
 
-    const emailContainer = document.getElementById('emailBody');
-    emailContainer.innerHTML = ''; // Clear existing content
+    // Use UIHandler for display
+    window.uiHandler.showEmail(email);
 
-    const iframe = document.createElement('iframe');
-    // Remove allow-same-origin to prevent sandbox escapes
-    iframe.setAttribute('sandbox', 'allow-popups allow-scripts');
-    iframe.style.width = '100%';
-    iframe.style.border = 'none';
-    // Use fixed height for scrollable content
-    iframe.style.height = '500px';
-    emailContainer.appendChild(iframe);
+    // Store as selected email
+    this.selectedEmail = email;
+}
 
-    // Use srcdoc to load content without accessing iframe.document
-    iframe.srcdoc = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <base target="_blank">
-            <style>
-                body {
-                    margin: 0;
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    overflow-y: auto;
-                }
-                img { max-width: 100%; height: auto; }
-                a { color: #1a73e8; }
-            </style>
-        </head>
-        <body>${email.content}</body>
-        </html>
-    `;
+async function toggleReadStatus(emailId) {
+    const email = this.emails.find(e => e.id === emailId);
+    if (!email) return;
+    
+    await this.modifyEmail(email.id, {
+        removeLabelIds: email.read ? [] : ['UNREAD'],
+        addLabelIds: email.read ? ['UNREAD'] : []
+    });
+    
+    email.read = !email.read;
+    this.renderEmailItem(email);
+    this.updateFolderCounts();
 }
 
 function formatEmailAddress(address) {
@@ -325,74 +319,26 @@ function parseEmailAddress(address) {
 }
 
 function sanitizeHTML(html) {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
     
-    // Preserve styles for email content
-    const originalStyles = doc.getElementsByTagName('style');
-    let styleContent = '';
-    Array.from(originalStyles).forEach(style => {
-        styleContent += style.textContent;
-        style.remove();
-    });
-
-    // Remove dangerous elements
-    const dangerousTags = ['script', 'iframe', 'object', 'embed', 'form'];
-    dangerousTags.forEach(tag => {
-        doc.querySelectorAll(tag).forEach(node => node.remove());
-    });
-
-    // Process elements
-    doc.querySelectorAll('*').forEach(node => {
-        // Keep original styles but sanitize them
-        const originalStyle = node.getAttribute('style');
-        if (originalStyle) {
-            const safeStyle = this.sanitizeCSS(originalStyle);
-            if (safeStyle) {
-                node.setAttribute('style', safeStyle);
-            }
-        }
-
-        // Handle images
-        if (node.tagName === 'IMG') {
-            this.processImage(node);
-            return;
-        }
-
-        // Clean other attributes
-        const allowedAttrs = ['href', 'src', 'alt', 'title', 'class', 'target', 'style'];
-        Array.from(node.attributes).forEach(attr => {
-            if (!allowedAttrs.includes(attr.name)) {
-                node.removeAttribute(attr.name);
-            }
-            if (attr.name === 'href') {
-                node.setAttribute('target', '_blank');
-                node.setAttribute('rel', 'noopener noreferrer');
-            }
-        });
-    });
-
-    // Reinsert sanitized styles in a scoped manner
-    if (styleContent) {
-        const safeStyles = this.sanitizeCSS(styleContent);
-        const styleElement = doc.createElement('style');
-        styleElement.textContent = safeStyles;
-        doc.body.insertBefore(styleElement, doc.body.firstChild);
-    }
-
-    // Add click protection for all links
+    // Handle links
     doc.querySelectorAll('a').forEach(link => {
-        const url = link.getAttribute('href');
-        if (url) {
-            link.addEventListener('click', async (e) => {
-                e.preventDefault();
-                if (await this.validateLink(url)) {
-                    window.open(url, '_blank', 'noopener,noreferrer');
-                } else {
-                    showNotification('This link appears to be unsafe', 'warning');
-                }
-            });
+        const url = link.href;
+        
+        // Remove target attribute to prevent new tab opening
+        link.removeAttribute('target');
+        
+        // Mark suspicious links
+        if (hasSuspiciousLinks(url)) {
+            link.classList.add('suspicious-link');
+            link.title = 'Warning: This link appears suspicious';
+            link.dataset.safe = 'false';
         }
+
+        // Preserve href but remove any onclick handlers
+        link.removeAttribute('onclick');
+        link.removeAttribute('onmousedown');
+        link.removeAttribute('onmouseup');
     });
 
     return doc.body.innerHTML;
@@ -465,46 +411,6 @@ function sanitizeCSS(css) {
     } catch (error) {
         console.error('Error sanitizing CSS:', error);
         return '';
-    }
-}
-
-async function validateLink(url) {
-    // Check against known malicious URL patterns
-    const suspiciousPatterns = [
-        /^data:/i,
-        /^javascript:/i,
-        /^vbscript:/i,
-        /^file:/i,
-        /^ftp:/i,
-    ];
-
-    if (suspiciousPatterns.some(pattern => pattern.test(url))) {
-        return false;
-    }
-
-    try {
-        // Check against Google Safe Browsing API
-        const response = await fetch(`https://safebrowsing.googleapis.com/v4/threatMatches:find?key=${this.API_KEY}`, {
-            method: 'POST',
-            body: JSON.stringify({
-                client: {
-                    clientId: "Nova Mail",
-                    clientVersion: "1.0.0"
-                },
-                threatInfo: {
-                    threatTypes: ["MALWARE", "SOCIAL_ENGINEERING", "UNWANTED_SOFTWARE", "POTENTIALLY_HARMFUL_APPLICATION"],
-                    platformTypes: ["ANY_PLATFORM"],
-                    threatEntryTypes: ["URL"],
-                    threatEntries: [{ url }]
-                },
-            })
-        });
-
-        const data = await response.json();
-        return !data.matches; // Return true if no threats found
-    } catch (error) {
-        console.error('Error checking URL safety:', error);
-        return false;
     }
 }
 
@@ -1544,8 +1450,9 @@ async function updateFolderCounts() {
 
 // --- MARKER: END OF EMAIL OPERATIONS SECTION ---
 
-export const EmailOperations = {
-    handleEmailOperation, // Add to exports
+// Create EmailOperations object
+const EmailOperations = {
+    handleEmailOperation,
     loadEmails,
     getFolderQuery,
     handleEmailError,
@@ -1560,7 +1467,6 @@ export const EmailOperations = {
     sanitizeHTML,
     processImage,
     sanitizeCSS,
-    validateLink,
     sendEmail,
     parseEmailResponse,
     calculateSpamScore,
@@ -1614,5 +1520,12 @@ export const EmailOperations = {
     checkNewEmails,
     loadMoreEmails,
     setupAutoSave,
-    updateFolderCounts
+    updateFolderCounts,
+    toggleReadStatus
 };
+
+// Initialize UIHandler connection after EmailOperations is defined
+uiHandler.setEmailOps(EmailOperations);
+
+// Export EmailOperations
+export { EmailOperations };

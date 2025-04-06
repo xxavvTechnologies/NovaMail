@@ -50,6 +50,9 @@
     </div>
 
     <div class="app">
+        <button class="menu-toggle" id="menuToggle" style="display: none;">
+            <i class="fa-solid fa-bars"></i>
+        </button>
         <div class="sidebar">
             <!-- Remove the auth-section div and just keep emailControls -->
             <div id="emailControls" style="display: none;">
@@ -114,74 +117,10 @@
                 Select an email to view or compose a new one
             </div>
             <div class="email-view fade-in" id="emailView" style="display: none;">
-                <div class="email-header">
-                    <button class="back-button" id="backToList">
-                        <i class="fa-solid fa-arrow-left"></i>
-                        Back to Inbox
-                    </button>
-                    <div class="header-main">
-                        <div class="header-top">
-                            <h2 id="emailSubject"></h2>
-                            <div class="header-actions">
-                                <span class="email-date" id="emailDate"></span>
-                            </div>
-                        </div>
-                        <div class="header-addresses">
-                            <div class="address-line">
-                                <span class="meta-label">From</span>
-                                <div class="email-address" id="emailFrom"></div>
-                            </div>
-                            <div class="address-line">
-                                <span class="meta-label">To</span>
-                                <div class="email-address" id="emailTo"></div>
-                            </div>
-                        </div>
-                        <div class="ai-features" id="aiFeatures">
-                            <span class="ai-features-title">
-                                <i class="fa-solid fa-sparkles"></i>
-                                Astro Tools
-                            </span>
-                            <div class="ai-buttons">
-                                <button class="ai-btn" id="summarizeBtn">
-                                    <i class="fa-solid fa-compress"></i>
-                                    Summarize
-                                </button>
-                                <button class="ai-btn" id="analyzeBtn">
-                                    <i class="fa-solid fa-magnifying-glass-chart"></i>
-                                    Analyze
-                                </button>
-                                <button class="ai-btn" id="extractBtn">
-                                    <i class="fa-solid fa-list-check"></i>
-                                    Actions
-                                </button>
-                                <button class="ai-btn" id="suggestBtn">
-                                    <i class="fa-solid fa-reply"></i>
-                                    Suggest
-                                </button>
-                            </div>
-                            <div id="aiResponse" class="ai-response">
-                                <!-- AI responses will appear here -->
-                            </div>
-                        </div>
-                        <div class="quick-actions">
-                            <button class="quick-action-btn" id="quickReply">
-                                <i class="fa-solid fa-reply"></i>
-                                Reply
-                            </button>
-                            <button class="quick-action-btn" id="quickReplyAll">
-                                <i class="fa-solid fa-reply-all"></i>
-                                Reply All
-                            </button>
-                            <button class="quick-action-btn" id="quickForward">
-                                <i class="fa-solid fa-share"></i>
-                                Forward
-                            </button>
-                        </div>
-                    </div>
+                <div class="email-header" id="emailHeader">
+                    <!-- Content will be dynamically inserted by uihandler.js -->
                 </div>
-                <div class="email-content-wrapper">
-                    <div class="email-content" id="emailBody"></div>
-                </div>
+                <div class="email-content" id="emailBody"></div>
             </div>
             <div class="composer fade-in" id="emailComposer" style="display: none;">
                 <div class="composer-header">

@@ -23,8 +23,8 @@ class EmailApp {
         this.isAuthenticated = false;
         this.gapiLoaded = false;
         this.gisLoaded = false;
-        this.CLIENT_ID = '139502800975-lqhp99o1t4pqv7tkjcodunqch8b4vbut.apps.googleusercontent.com'; // Replace with your Google OAuth client ID
-        this.API_KEY = 'AIzaSyBtIKYVjyfyhCXIkXHAsVvnyVSbNFZ_9HM'; // Replace with your Google API key
+        this.CLIENT_ID = '349176160657-tr09v5qo2t3tlosvphrcre268ifuauuk.apps.googleusercontent.com'; // Replace with your Google OAuth client ID
+        this.API_KEY = 'AIzaSyCKpkcXQ6LeySFKqAc0UcwPf9yy7pdSTZE'; // Replace with your Google API key
         this.DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest'];
         this.SCOPES = 'https://www.googleapis.com/auth/gmail.modify';
         this.tokenClient = null;
@@ -103,22 +103,22 @@ class EmailApp {
             await gapi.client.init({
                 apiKey: this.API_KEY,
                 discoveryDocs: this.DISCOVERY_DOCS,
-            });
-
-            // Initialize token client after gapi is ready
-            this.tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: this.CLIENT_ID,
-                scope: this.SCOPES,
-                callback: this.handleAuthResponse.bind(this),
-                error_callback: this.handleAuthError.bind(this)
+            }).then(() => {
+                // Only initialize token client after gapi is ready
+                if (google.accounts?.oauth2) {
+                    this.tokenClient = google.accounts.oauth2.initTokenClient({
+                        client_id: this.CLIENT_ID,
+                        scope: this.SCOPES,
+                        callback: this.handleAuthResponse.bind(this),
+                        error_callback: this.handleAuthError.bind(this)
+                    });
+                } else {
+                    throw new Error('Google OAuth2 not available');
+                }
             });
 
             // Now check stored token and auth state
             if (this.accessToken) {
-                gapi.client.setToken({
-                    access_token: this.accessToken
-                });
-
                 const isValid = await this.validateStoredToken();
                 if (isValid) {
                     this.isAuthenticated = true;
@@ -454,19 +454,41 @@ class EmailApp {
                 this.switchFolder(folder.dataset.folder);
             });
         });
+
+        // Add menu toggle handler
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.querySelector('.sidebar');
+        
+        if (menuToggle && sidebar) {
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('active');
+            });
+
+            // Close sidebar when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!sidebar.contains(e.target) && !menuToggle.contains(e.target)) {
+                    sidebar.classList.remove('active');
+                }
+            });
+        }
     }
 
     async handleAuthClick() {
         try {
-            // Clear any existing tokens
-            this.accessToken = null;
+            if (!this.tokenClient) {
+                // Re-initialize token client if needed
+                this.tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: this.CLIENT_ID,
+                    scope: this.SCOPES,
+                    callback: this.handleAuthResponse.bind(this),
+                    error_callback: this.handleAuthError.bind(this)
+                });
+            }
             
             // Request new token
-            if (this.tokenClient) {
-                this.tokenClient.requestAccessToken();
-            } else {
-                throw new Error('Token client not initialized');
-            }
+            this.tokenClient.requestAccessToken({
+                prompt: ''
+            });
         } catch (err) {
             console.error('Auth error:', err);
             this.showNotification('Authentication failed. Please try again.', 'error');
@@ -474,7 +496,6 @@ class EmailApp {
         }
     }
 
-    // Modified to store refresh token
     async handleAuthResponse(response) {
         if (response.access_token) {
             this.accessToken = response.access_token;
