@@ -204,42 +204,75 @@ function renderEmails() {
 
     emailList.innerHTML = '';
     
-    this.emails.forEach(email => {
-        const div = document.createElement('div');
-        div.className = `email-item ${email.read ? '' : 'unread'} ${email.selected ? 'selected' : ''}`;
-        div.dataset.emailId = email.id;
+    // Group emails by date
+    const groupedEmails = this.emails.reduce((groups, email) => {
+        const date = new Date(email.date);
+        const today = new Date();
+        const yesterday = new Date(today); 
+        yesterday.setDate(yesterday.getDate() - 1);
+        
+        let dateGroup;
+        if (date.toDateString() === today.toDateString()) {
+            dateGroup = 'Today';
+        } else if (date.toDateString() === yesterday.toDateString()) {
+            dateGroup = 'Yesterday';
+        } else if (date.getFullYear() === today.getFullYear()) {
+            dateGroup = date.toLocaleDateString(undefined, { month: 'long', day: 'numeric' });
+        } else {
+            dateGroup = date.toLocaleDateString(undefined, { year: 'numeric', month: 'long' });
+        }
+        
+        if (!groups[dateGroup]) {
+            groups[dateGroup] = [];
+        }
+        groups[dateGroup].push(email);
+        return groups;
+    }, {});
 
-        // Extract display name from email
-        const fromMatch = email.from.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
-        const displayName = fromMatch ? (fromMatch[1] || fromMatch[2]) : email.from;
+    // Render emails with date separators
+    Object.entries(groupedEmails).forEach(([date, emails]) => {
+        const dateDiv = document.createElement('div');
+        dateDiv.className = 'date-separator';
+        dateDiv.textContent = date;
+        emailList.appendChild(dateDiv);
 
-        // Format snippet
-        const snippet = email.snippet || email.plainText?.substring(0, 140) || '';
-        const date = this.formatEmailDate(email.date);
+        emails.forEach(email => {
+            const div = document.createElement('div');
+            div.className = `email-item ${email.read ? '' : 'unread'} ${email.selected ? 'selected' : ''}`;
+            div.dataset.emailId = email.id;
 
-        div.innerHTML = `
-            <div class="email-content-preview">
-                <div class="email-sender">${this.sanitizeHTML(displayName)}</div>
-                <div class="email-subject">${this.sanitizeHTML(email.subject || '(No Subject)')}</div>
-                <div class="email-snippet">${this.sanitizeHTML(snippet)}${snippet.length > 140 ? '...' : ''}</div>
-            </div>
-            <div class="email-metadata">
-                <div class="email-date">${date}</div>
-                ${email.hasAttachment ? '<div class="email-attachment"><i class="fa-solid fa-paperclip"></i></div>' : ''}
-            </div>
-        `;
+            // Extract display name from email
+            const fromMatch = email.from.match(/(?:"?([^"]*)"?\s)?(?:<?(.+@[^>]+)>?)/);
+            const displayName = fromMatch ? (fromMatch[1] || fromMatch[2]) : email.from;
 
-        div.addEventListener('click', (e) => {
-            if (!e.ctrlKey && !e.metaKey) {
-                this.showEmail(email);
-            }
+            // Format snippet
+            const snippet = email.snippet || email.plainText?.substring(0, 140) || '';
+            const date = this.formatEmailDate(email.date);
+
+            div.innerHTML = `
+                <div class="email-content-preview">
+                    <div class="email-sender">${this.sanitizeHTML(displayName)}</div>
+                    <div class="email-subject">${this.sanitizeHTML(email.subject || '(No Subject)')}</div>
+                    <div class="email-snippet">${this.sanitizeHTML(snippet)}${snippet.length > 140 ? '...' : ''}</div>
+                </div>
+                <div class="email-metadata">
+                    <div class="email-date">${date}</div>
+                    ${email.hasAttachment ? '<div class="email-attachment"><i class="fa-solid fa-paperclip"></i></div>' : ''}
+                </div>
+            `;
+
+            div.addEventListener('click', (e) => {
+                if (!e.ctrlKey && !e.metaKey) {
+                    this.showEmail(email);
+                }
+            });
+
+            div.addEventListener('dblclick', () => {
+                this.toggleReadStatus(email.id);
+            });
+
+            emailList.appendChild(div);
         });
-
-        div.addEventListener('dblclick', () => {
-            this.toggleReadStatus(email.id);
-        });
-
-        emailList.appendChild(div);
     });
 }
 
@@ -711,66 +744,164 @@ function base64ToArrayBuffer(base64) {
 }
 
 function initializeComposer() {
+    const composer = document.getElementById('emailComposer');
     const editor = document.getElementById('emailEditor');
-    const toolbar = document.querySelector('.composer-toolbar');
-    // Handle toolbar buttons
-    toolbar.addEventListener('click', (e) => {
-        const button = e.target.closest('.toolbar-btn');
-        if (!button) return;
-        e.preventDefault();
-        const command = button.dataset.command;
+    const dragHandle = composer.querySelector('.drag-handle');
+    const resizeHandle = composer.querySelector('.resize-handle');
+    const maximizeBtn = composer.querySelector('.maximize-btn');
+    const saveStatus = composer.querySelector('.save-status');
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+
+    // Drag functionality
+    dragHandle.addEventListener('mousedown', (e) => {
+        if (composer.classList.contains('fullscreen')) return;
+        isDragging = true;
+        dragOffset = {
+            x: e.clientX - composer.offsetLeft,
+            y: e.clientY - composer.offsetTop
+        };
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        composer.style.left = `${e.clientX - dragOffset.x}px`;
+        composer.style.top = `${e.clientY - dragOffset.y}px`;
+    });
+
+    document.addEventListener('mouseup', () => isDragging = false);
+
+    // Maximize functionality
+    maximizeBtn.addEventListener('click', () => {
+        composer.classList.toggle('fullscreen');
+        maximizeBtn.querySelector('i').classList.toggle('fa-expand');
+        maximizeBtn.querySelector('i').classList.toggle('fa-compress');
+    });
+
+    // Autosave status
+    let saveTimer;
+    if (editor) {
+        editor.addEventListener('input', () => {
+            if (saveStatus) {
+                saveStatus.textContent = 'Saving...';
+                clearTimeout(saveTimer);
+                saveTimer = setTimeout(async () => {
+                    await this.saveDraft();
+                    saveStatus.textContent = 'Saved';
+                    setTimeout(() => {
+                        if (saveStatus) saveStatus.textContent = '';
+                    }, 2000);
+                }, 1000);
+            }
+        });
+    }
+
+    // Initialize recipient suggestions
+    this.initializeRecipientSuggestions();
+
+    return true;
+}
+
+function initializeRecipientSuggestions() {
+    const inputs = ['toField', 'ccField', 'bccField'];
+    
+    inputs.forEach(inputId => {
+        const input = document.getElementById(inputId);
+        const suggestionsContainer = input.parentElement.querySelector('.recipients-suggestions');
         
-        if (command === 'createLink') {
-            const url = prompt('Enter URL:');
-            if (url) document.execCommand(command, false, url);
-        } else if (command === 'insertImage') {
-            const url = prompt('Enter image URL:');
-            if (url) document.execCommand(command, false, url);
-        } else if (command === 'foreColor' || command === 'backColor') {
-            const color = this.showColorPicker();
-            if (color) document.execCommand(command, false, color);
-        } else {
-            document.execCommand(command, false, null);
-        }
-        
-        // Toggle active state for applicable buttons
-        if (!['createLink', 'insertImage', 'foreColor', 'backColor'].includes(command)) {
-            button.classList.toggle('active');
-        }
-    });
-       
-    // Handle file attachments
-    const fileInput = document.querySelector('.attachment-btn input');
-    fileInput.addEventListener('change', this.handleAttachments.bind(this));
+        input.addEventListener('input', async () => {
+            const value = input.value.trim();
+            if (value.length < 2) {
+                suggestionsContainer.style.display = 'none';
+                return;
+            }
 
-    // Handle Cc/Bcc toggle
-    const ccBccBtn = document.querySelector('.cc-bcc-btn');
-    const ccBccFields = document.querySelector('.cc-bcc-fields');
-    ccBccBtn.addEventListener('click', () => {
-        ccBccFields.style.display = ccBccFields.style.display === 'none' ? 'block' : 'none';
-    });
-
-    // Handle composer window controls
-    document.querySelector('.minimize-btn').addEventListener('click', () => {
-        const composer = document.getElementById('emailComposer');
-        composer.classList.toggle('minimized');
-    });
-
-    document.querySelector('.close-btn').addEventListener('click', () => {
-        if (confirm('Discard this message?')) {
-            this.resetComposer();
-        }
+            const suggestions = await this.searchContacts(value);
+            if (suggestions.length) {
+                suggestionsContainer.innerHTML = suggestions
+                    .map(s => `<div class="suggestion-item" data-email="${s.email}">
+                        <i class="fa-regular fa-user"></i>
+                        <div>
+                            <div>${s.name}</div>
+                            <div class="text-secondary">${s.email}</div>
+                        </div>
+                    </div>`)
+                    .join('');
+                suggestionsContainer.style.display = 'block';
+            }
+        });
     });
 }
 
 function showColorPicker() {
-    // Create a temporary input
-    const input = document.createElement('input');
-    input.type = 'color';
-    input.click();
-    
     return new Promise(resolve => {
-        input.addEventListener('change', () => resolve(input.value));
+        const picker = document.createElement('div');
+        picker.className = 'color-picker';
+        picker.innerHTML = `
+            <div class="color-grid">
+                <button style="background: #000000" data-color="#000000"></button>
+                <button style="background: #434343" data-color="#434343"></button>
+                <button style="background: #666666" data-color="#666666"></button>
+                <button style="background: #999999" data-color="#999999"></button>
+                <button style="background: #b7b7b7" data-color="#b7b7b7"></button>
+                <button style="background: #cccccc" data-color="#cccccc"></button>
+                <button style="background: #d9d9d9" data-color="#d9d9d9"></button>
+                <button style="background: #efefef" data-color="#efefef"></button>
+                <button style="background: #f3f3f3" data-color="#f3f3f3"></button>
+                <button style="background: #ffffff" data-color="#ffffff"></button>
+                <button style="background: #980000" data-color="#980000"></button>
+                <button style="background: #ff0000" data-color="#ff0000"></button>
+                <button style="background: #ff9900" data-color="#ff9900"></button>
+                <button style="background: #ffff00" data-color="#ffff00"></button>
+                <button style="background: #00ff00" data-color="#00ff00"></button>
+                <button style="background: #00ffff" data-color="#00ffff"></button>
+                <button style="background: #4a86e8" data-color="#4a86e8"></button>
+                <button style="background: #0000ff" data-color="#0000ff"></button>
+                <button style="background: #9900ff" data-color="#9900ff"></button>
+                <button style="background: #ff00ff" data-color="#ff00ff"></button>
+            </div>
+            <div class="color-picker-footer">
+                <input type="color" id="customColor">
+                <button class="cancel-btn">Cancel</button>
+            </div>
+        `;
+
+        picker.style.position = 'absolute';
+        document.body.appendChild(picker);
+
+        // Position the picker near the toolbar
+        const toolbar = document.querySelector('.composer-toolbar');
+        const rect = toolbar.getBoundingClientRect();
+        picker.style.top = `${rect.bottom + 5}px`;
+        picker.style.left = `${rect.left}px`;
+
+        // Handle color selection
+        picker.addEventListener('click', (e) => {
+            const button = e.target.closest('button');
+            if (button && button.dataset.color) {
+                resolve(button.dataset.color);
+                picker.remove();
+            } else if (button && button.className === 'cancel-btn') {
+                resolve(null);
+                picker.remove();
+            }
+        });
+
+        // Handle custom color input
+        const customColor = picker.querySelector('#customColor');
+        customColor.addEventListener('change', () => {
+            resolve(customColor.value);
+            picker.remove();
+        });
+
+        // Close when clicking outside
+        document.addEventListener('click', function closeColorPicker(e) {
+            if (!picker.contains(e.target)) {
+                picker.remove();
+                document.removeEventListener('click', closeColorPicker);
+                resolve(null);
+            }
+        });
     });
 }
 
@@ -1304,26 +1435,30 @@ async function startEmailPolling() {
     if (isPolling) return;
     isPolling = true;
     
-    try {
-        // Initial check with error handling
-        await this.checkNewEmails(); // Add this. to bind context
-        
-        // Poll every 30 seconds with error handling
-        pollingInterval = setInterval(async () => {
-            try {
-                await this.checkNewEmails(); // Add this. to bind context
-            } catch (error) {
-                console.error('Email polling error:', error);
-                if (error.message?.includes('auth')) {
-                    clearInterval(pollingInterval);
-                    isPolling = false;
-                }
+    // Check every 30 seconds
+    const POLL_INTERVAL = 30000;
+    
+    async function checkWithIndicator() {
+        const indicator = document.querySelector('.refresh-indicator');
+        try {
+            indicator?.classList.add('active');
+            await checkNewEmails();
+        } catch (error) {
+            console.error('Email polling error:', error);
+            if (error.message?.includes('auth')) {
+                clearInterval(pollingInterval);
+                isPolling = false;
             }
-        }, 30000);
-    } catch (error) {
-        console.error('Failed to start email polling:', error);
-        isPolling = false;
+        } finally {
+            indicator?.classList.remove('active');
+        }
     }
+
+    // Initial check
+    await checkWithIndicator();
+    
+    // Set up polling
+    pollingInterval = setInterval(checkWithIndicator, POLL_INTERVAL);
 }
 
 async function checkNewEmails() {
@@ -1480,6 +1615,7 @@ const EmailOperations = {
     downloadAttachment,
     base64ToArrayBuffer,
     initializeComposer,
+    initializeRecipientSuggestions,
     showColorPicker,
     handleAttachments,
     createEmailRequest,

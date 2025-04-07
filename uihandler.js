@@ -327,6 +327,68 @@ function showEmail(email) {
         </div>
     `;
 
+    // Add action button handlers
+    header.querySelector('.reply-btn').addEventListener('click', () => {
+        this.emailOps.replyToEmail();
+    });
+
+    header.querySelector('.forward-btn').addEventListener('click', () => {
+        this.emailOps.forwardEmail();
+    });
+
+    header.querySelector('.more-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const menu = document.createElement('div');
+        menu.className = 'popup-menu';
+        menu.innerHTML = `
+            <div class="menu-item" data-action="replyAll">
+                <i class="fa-solid fa-reply-all"></i>
+                Reply All
+            </div>
+            <div class="menu-item" data-action="archive">
+                <i class="fa-solid fa-box-archive"></i>
+                Archive
+            </div>
+            <div class="menu-item" data-action="spam">
+                <i class="fa-solid fa-ban"></i>
+                Mark as Spam
+            </div>
+            <div class="menu-item" data-action="delete">
+                <i class="fa-regular fa-trash-can"></i>
+                Delete
+            </div>
+        `;
+
+        // Position menu below button
+        const rect = e.target.getBoundingClientRect();
+        menu.style.top = `${rect.bottom + 5}px`;
+        menu.style.right = `${window.innerWidth - rect.right}px`;
+        document.body.appendChild(menu);
+
+        // Handle menu item clicks
+        menu.addEventListener('click', (e) => {
+            const action = e.target.closest('.menu-item')?.dataset.action;
+            if (!action) return;
+
+            switch(action) {
+                case 'replyAll': this.emailOps.replyAllToEmail(); break;
+                case 'archive': this.emailOps.archiveSelected([email.id]); break;
+                case 'spam': this.emailOps.markAsSpam(); break;
+                case 'delete': this.emailOps.deleteEmail(); break;
+            }
+            menu.remove();
+        });
+
+        // Close menu when clicking outside
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        document.addEventListener('click', closeMenu);
+    });
+
     // Add back button handler
     const backBtn = document.getElementById('backToList');
     if (backBtn) {
@@ -805,35 +867,71 @@ function initializeComposer() {
 
 function setupEmailList() {
     const emailList = document.getElementById('emailList');
-    let isInitialLoad = true;
-    
-    // Add infinite scroll with debounce
+    const container = document.querySelector('.email-list-container');
+    let isLoading = false;
+    let pullStartY = 0;
+    let pullMoveY = 0;
+    let lastTouchY = 0;
+    const PULL_THRESHOLD = 80;
+
+    // Setup infinite scroll
     const observer = new IntersectionObserver(entries => {
         const lastEntry = entries[entries.length - 1];
-        if (lastEntry.isIntersecting && !isInitialLoad) {
-            this.loadMoreEmails();
+        if (lastEntry.isIntersecting && !isLoading) {
+            isLoading = true;
+            this.loadMoreEmails().finally(() => {
+                isLoading = false;
+            });
         }
-    }, { 
-        threshold: 0.5,
-        rootMargin: '100px' // Load more before reaching the very bottom
+    }, { threshold: 0.5 });
+
+    // Add pull-to-refresh handlers
+    container.addEventListener('touchstart', (e) => {
+        lastTouchY = e.touches[0].clientY;
+        if (emailList.scrollTop <= 0) {
+            pullStartY = lastTouchY;
+            container.classList.add('pulling');
+        }
+    }, { passive: true });
+
+    container.addEventListener('touchmove', (e) => {
+        const touchY = e.touches[0].clientY;
+        const moveDiff = touchY - lastTouchY;
+        lastTouchY = touchY;
+
+        if (emailList.scrollTop <= 0 && moveDiff > 0) {
+            // Only handle pull-to-refresh when at top and pulling down
+            if (container.classList.contains('pulling')) {
+                pullMoveY = touchY - pullStartY;
+                if (pullMoveY > 0 && pullMoveY < PULL_THRESHOLD) {
+                    e.preventDefault();
+                    emailList.style.transform = `translateY(${pullMoveY}px)`;
+                    const progress = (pullMoveY / PULL_THRESHOLD) * 100;
+                    document.querySelector('.refresh-indicator').style.opacity = progress + '%';
+                }
+            }
+        }
+    }, { passive: false });
+
+    container.addEventListener('touchend', async () => {
+        if (pullMoveY >= PULL_THRESHOLD) {
+            // Trigger refresh
+            container.classList.add('refreshing');
+            await this.loadEmails(this.currentFolder);
+        }
+        
+        // Reset pull state
+        container.classList.remove('pulling', 'refreshing');
+        emailList.style.transform = '';
+        pullStartY = 0;
+        pullMoveY = 0;
     });
 
-    // Add sentinel element for infinite scroll
-    let sentinel = document.querySelector('.scroll-sentinel');
-    if (!sentinel) {
-        sentinel = document.createElement('div');
-        sentinel.className = 'scroll-sentinel';
-        emailList.appendChild(sentinel);
-    }
-
-    // Start observing after initial load completes
-    setTimeout(() => {
-        observer.observe(sentinel);
-        isInitialLoad = false;
-    }, 1000);
-
-    // Set up real-time updates
-    this.startEmailPolling();
+    // Setup infinite scroll sentinel
+    const sentinel = document.createElement('div');
+    sentinel.className = 'scroll-sentinel';
+    emailList.appendChild(sentinel);
+    observer.observe(sentinel);
 }
 
 function createEmailItem(email, emailOps) {

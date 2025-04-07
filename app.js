@@ -85,51 +85,17 @@ class EmailApp {
 
     async initialize() {
         try {
-            // First load the API scripts and wait for them to be ready
-            await this.loadGoogleAPI();
             await this.waitForLibraries();
             
-            // Load gapi client first
-            await new Promise((resolve, reject) => {
-                gapi.load('client', {
-                    callback: resolve,
-                    onerror: reject,
-                    timeout: 5000,
-                    ontimeout: () => reject(new Error('Failed to load Google API client'))
-                });
-            });
-
-            // Then initialize the client
-            await gapi.client.init({
-                apiKey: this.API_KEY,
-                discoveryDocs: this.DISCOVERY_DOCS,
-            }).then(() => {
-                // Only initialize token client after gapi is ready
-                if (google.accounts?.oauth2) {
-                    this.tokenClient = google.accounts.oauth2.initTokenClient({
-                        client_id: this.CLIENT_ID,
-                        scope: this.SCOPES,
-                        callback: this.handleAuthResponse.bind(this),
-                        error_callback: this.handleAuthError.bind(this)
-                    });
-                } else {
-                    throw new Error('Google OAuth2 not available');
-                }
-            });
-
-            // Now check stored token and auth state
-            if (this.accessToken) {
-                const isValid = await this.validateStoredToken();
-                if (isValid) {
+            // Attempt to restore session
+            if (this.accessToken && this.refreshToken) {
+                if (this.isTokenValid()) {
                     this.isAuthenticated = true;
                     this.hideLoginOverlay();
+                    this.setupTokenRefresh();
                     await this.setupAfterAuth();
                 } else {
-                    const refreshed = await this.refreshAccessToken();
-                    if (!refreshed) {
-                        this.showLoginOverlay();
-                        this.clearStoredCredentials();
-                    }
+                    await this.refreshAccessToken();
                 }
             } else {
                 this.showLoginOverlay();
@@ -194,24 +160,50 @@ class EmailApp {
 
     async refreshAccessToken() {
         try {
-            this.tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: this.CLIENT_ID,
-                scope: this.SCOPES,
-                callback: this.handleAuthResponse.bind(this),
-                error_callback: this.handleAuthError.bind(this),
-                prompt: 'none'
+            if (!this.refreshToken) {
+                return false;
+            }
+
+            const response = await fetch('https://oauth2.googleapis.com/token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    client_id: this.CLIENT_ID,
+                    refresh_token: this.refreshToken,
+                    grant_type: 'refresh_token'
+                })
             });
 
-            // Try silent token refresh
-            await this.tokenClient.requestAccessToken({
-                prompt: 'none'
+            if (!response.ok) {
+                throw new Error('Token refresh failed');
+            }
+
+            const data = await response.json();
+            this.handleAuthResponse({
+                access_token: data.access_token,
+                expires_in: data.expires_in
             });
+
             return true;
         } catch (error) {
-            console.error('Silent token refresh failed:', error);
-            this.clearStoredCredentials();
+            console.error('Token refresh failed:', error);
+            this.handleAuthExpired();
             return false;
         }
+    }
+
+    setupTokenRefresh() {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+        }
+        
+        this.refreshTimer = setInterval(async () => {
+            if (!this.isTokenValid() && this.refreshToken) {
+                await this.refreshAccessToken();
+            }
+        }, 60000); // Check every minute
     }
 
     isTokenValid() {
@@ -244,8 +236,13 @@ class EmailApp {
     async waitForLibraries() {
         return new Promise((resolve) => {
             const check = () => {
-                if (typeof gapi !== 'undefined' && typeof google !== 'undefined' && typeof google.accounts !== 'undefined') {
-                    resolve();
+                if (typeof gapi !== 'undefined' && 
+                    typeof google !== 'undefined' && 
+                    typeof google.accounts !== 'undefined') {
+                    // Ensure GAPI base is loaded
+                    gapi.load('client', () => {
+                        resolve();
+                    });
                 } else {
                     setTimeout(check, 100);
                 }
@@ -256,18 +253,21 @@ class EmailApp {
 
     async initializeGoogleClient() {
         try {
-            // Load the Gmail API
-            await new Promise((resolve) => {
-                const checkApi = () => {
-                    if (gapi.client?.gmail) {
-                        resolve();
-                    } else {
-                        setTimeout(checkApi, 100);
-                    }
-                };
-                checkApi();
+            // First ensure GAPI is loaded
+            if (!gapi.client) {
+                await new Promise((resolve) => {
+                    gapi.load('client', resolve);
+                });
+            }
+
+            // Now initialize the client
+            await gapi.client.init({
+                apiKey: this.API_KEY,
+                discoveryDocs: this.DISCOVERY_DOCS
             });
 
+            // Load Gmail API
+            await gapi.client.load('gmail', 'v1');
             console.log('Google API client initialized');
         } catch (error) {
             console.error('Error initializing Google API client:', error);
@@ -501,19 +501,34 @@ class EmailApp {
             this.accessToken = response.access_token;
             localStorage.setItem('accessToken', response.access_token);
             
-            // Set the token in gapi client
-            gapi.client.setToken({
-                access_token: response.access_token
-            });
+            // Store refresh token if provided
+            if (response.refresh_token) {
+                this.refreshToken = response.refresh_token;
+                localStorage.setItem('refreshToken', response.refresh_token);
+            }
             
-            // Store token expiry (get from response or default to 1 hour)
-            const expiryTime = Date.now() + ((response.expires_in || 3600) * 1000);
+            // Ensure GAPI is initialized before setting token
+            await this.initializeGoogleClient();
+            
+            // Set token in gapi client after initialization
+            if (gapi.client) {
+                gapi.client.setToken({
+                    access_token: response.access_token
+                });
+            } else {
+                throw new Error('GAPI client not initialized');
+            }
+            
+            // Store token expiry with 5 minute buffer
+            const expiryTime = Date.now() + ((response.expires_in || 3600) * 1000) - (5 * 60 * 1000);
             localStorage.setItem('tokenExpiry', expiryTime.toString());
             this.tokenExpiry = expiryTime.toString();
             
             this.isAuthenticated = true;
             this.hideLoginOverlay();
             document.getElementById('emailControls').style.display = 'block';
+            
+            this.setupTokenRefresh();
             
             try {
                 await this.setupAfterAuth();

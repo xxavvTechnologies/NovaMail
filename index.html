@@ -85,6 +85,7 @@
             </div>
         </div>
         <div class="email-list-container">
+            <div class="refresh-indicator"></div>
             <div class="email-list-header">
                 <div class="search-bar">
                     <i class="fa-solid fa-magnifying-glass search-icon"></i>
@@ -124,10 +125,16 @@
             </div>
             <div class="composer fade-in" id="emailComposer" style="display: none;">
                 <div class="composer-header">
-                    <h2>New Message</h2>
+                    <div class="drag-handle">
+                        <h2>New Message</h2>
+                        <span class="save-status"></span>
+                    </div>
                     <div class="composer-actions">
                         <button class="minimize-btn" title="Minimize">
                             <i class="fa-solid fa-minus"></i>
+                        </button>
+                        <button class="maximize-btn" title="Fullscreen">
+                            <i class="fa-solid fa-expand"></i>
                         </button>
                         <button class="close-btn" title="Close">
                             <i class="fa-solid fa-xmark"></i>
@@ -135,105 +142,115 @@
                     </div>
                 </div>
                 <div class="composer-body">
-                    <div class="field">
-                        <input type="text" id="toField" placeholder="To">
-                        <button class="cc-bcc-btn">Cc/Bcc</button>
-                    </div>
-                    <div class="cc-bcc-fields" style="display: none;">
+                    <div class="recipients-section">
                         <div class="field">
-                            <input type="text" id="ccField" placeholder="Cc">
+                            <div class="recipients-input">
+                                <input type="text" id="toField" placeholder="To" autocomplete="off">
+                                <div class="recipients-suggestions"></div>
+                            </div>
+                            <button class="cc-bcc-btn">Cc/Bcc</button>
                         </div>
-                        <div class="field">
-                            <input type="text" id="bccField" placeholder="Bcc">
+                        <div class="cc-bcc-fields" style="display: none;">
+                            <div class="field">
+                                <input type="text" id="ccField" placeholder="Cc" autocomplete="off">
+                            </div>
+                            <div class="field">
+                                <input type="text" id="bccField" placeholder="Bcc" autocomplete="off">
+                            </div>
                         </div>
                     </div>
                     <div class="field">
                         <input type="text" id="subjectField" placeholder="Subject">
                     </div>
-                    <div class="composer-toolbar">
-                        <div class="toolbar-group">
-                            <button class="toolbar-btn" data-command="bold" title="Bold">
-                                <i class="fa-solid fa-bold"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="italic" title="Italic">
-                                <i class="fa-solid fa-italic"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="underline" title="Underline">
-                                <i class="fa-solid fa-underline"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="strikeThrough" title="Strike">
-                                <i class="fa-solid fa-strikethrough"></i>
-                            </button>
+                    <div class="editor-container">
+                        <div class="composer-toolbar">
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" data-command="bold" title="Bold">
+                                    <i class="fa-solid fa-bold"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="italic" title="Italic">
+                                    <i class="fa-solid fa-italic"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="underline" title="Underline">
+                                    <i class="fa-solid fa-underline"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="strikeThrough" title="Strike">
+                                    <i class="fa-solid fa-strikethrough"></i>
+                                </button>
+                            </div>
+                            <div class="toolbar-group">
+                                <select class="font-family" title="Font">
+                                    <option value="Arial">Arial</option>
+                                    <option value="Times New Roman">Times New Roman</option>
+                                    <option value="Courier New">Courier New</option>
+                                </select>
+                                <select class="font-size" title="Size">
+                                    <option value="1">Small</option>
+                                    <option value="3" selected>Normal</option>
+                                    <option value="5">Large</option>
+                                    <option value="7">Huge</option>
+                                </select>
+                            </div>
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" data-command="foreColor" title="Text Color">
+                                    <i class="fa-solid fa-palette"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="backColor" title="Highlight">
+                                    <i class="fa-solid fa-highlighter"></i>
+                                </button>
+                            </div>
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" data-command="justifyLeft" title="Align Left">
+                                    <i class="fa-solid fa-align-left"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="justifyCenter" title="Center">
+                                    <i class="fa-solid fa-align-center"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="justifyRight" title="Align Right">
+                                    <i class="fa-solid fa-align-right"></i>
+                                </button>
+                            </div>
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
+                                    <i class="fa-solid fa-list-ul"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
+                                    <i class="fa-solid fa-list-ol"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="outdent" title="Decrease Indent">
+                                    <i class="fa-solid fa-outdent"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="indent" title="Increase Indent">
+                                    <i class="fa-solid fa-indent"></i>
+                                </button>
+                            </div>
+                            <div class="toolbar-group">
+                                <button class="toolbar-btn" data-command="createLink" title="Insert Link">
+                                    <i class="fa-solid fa-link"></i>
+                                </button>
+                                <button class="toolbar-btn" data-command="insertImage" title="Insert Image">
+                                    <i class="fa-solid fa-image"></i>
+                                </button>
+                                <label class="toolbar-btn attachment-btn" title="Add Attachment">
+                                    <i class="fa-solid fa-paperclip"></i>
+                                    <input type="file" multiple style="display: none;">
+                                </label>
+                            </div>
                         </div>
-                        <div class="toolbar-group">
-                            <select class="font-family" title="Font">
-                                <option value="Arial">Arial</option>
-                                <option value="Times New Roman">Times New Roman</option>
-                                <option value="Courier New">Courier New</option>
-                            </select>
-                            <select class="font-size" title="Size">
-                                <option value="1">Small</option>
-                                <option value="3" selected>Normal</option>
-                                <option value="5">Large</option>
-                                <option value="7">Huge</option>
-                            </select>
-                        </div>
-                        <div class="toolbar-group">
-                            <button class="toolbar-btn" data-command="foreColor" title="Text Color">
-                                <i class="fa-solid fa-palette"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="backColor" title="Highlight">
-                                <i class="fa-solid fa-highlighter"></i>
-                            </button>
-                        </div>
-                        <div class="toolbar-group">
-                            <button class="toolbar-btn" data-command="justifyLeft" title="Align Left">
-                                <i class="fa-solid fa-align-left"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="justifyCenter" title="Center">
-                                <i class="fa-solid fa-align-center"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="justifyRight" title="Align Right">
-                                <i class="fa-solid fa-align-right"></i>
-                            </button>
-                        </div>
-                        <div class="toolbar-group">
-                            <button class="toolbar-btn" data-command="insertUnorderedList" title="Bullet List">
-                                <i class="fa-solid fa-list-ul"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="insertOrderedList" title="Numbered List">
-                                <i class="fa-solid fa-list-ol"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="outdent" title="Decrease Indent">
-                                <i class="fa-solid fa-outdent"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="indent" title="Increase Indent">
-                                <i class="fa-solid fa-indent"></i>
-                            </button>
-                        </div>
-                        <div class="toolbar-group">
-                            <button class="toolbar-btn" data-command="createLink" title="Insert Link">
-                                <i class="fa-solid fa-link"></i>
-                            </button>
-                            <button class="toolbar-btn" data-command="insertImage" title="Insert Image">
-                                <i class="fa-solid fa-image"></i>
-                            </button>
-                            <label class="toolbar-btn attachment-btn" title="Add Attachment">
-                                <i class="fa-solid fa-paperclip"></i>
-                                <input type="file" multiple style="display: none;">
-                            </label>
-                        </div>
+                        <div class="editor" id="emailEditor" contenteditable="true"></div>
                     </div>
-                    <div class="editor" id="emailEditor" contenteditable="true"></div>
                     <div class="composer-footer">
                         <div class="attachments-list" id="attachmentsList"></div>
                         <div class="composer-actions">
-                            <button class="send-button" id="sendButton">Send</button>
+                            <button class="send-button primary-btn" id="sendButton">
+                                Send <kbd>⌘↵</kbd>
+                            </button>
                             <button class="save-draft-button">Save Draft</button>
                             <button class="discard-button">Discard</button>
                         </div>
                     </div>
                 </div>
+                <div class="resize-handle"></div>
             </div>
         </div>
         <div id="loading" class="loading-overlay">
